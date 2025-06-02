@@ -1,0 +1,34 @@
+{
+    "cSpell.language": "en,pt-BR",
+    "licenser.disableAutoHeaderInsertion": true,
+    "prettier.tabWidth": 4,
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "editor.formatOnSave": true,
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google,  ColumnLimit: 0, IndentWidth: 4, TabWidth: 4}",
+    "files.associations": {
+        "*.ino": "arduino",
+        "*.pl": "prolog",
+        "fileops.h": "c",
+        "stdio.h": "c",
+        "trie.h": "c",
+        "stdbool.h": "c",
+        "stdlib.h": "c",
+        "db.h": "c",
+        "locale.h": "c",
+        "assert.h": "c",
+        "dbui.h": "c",
+        "globals.h": "c",
+        "string.h": "c",
+        "unity.h": "c",
+        "test_trie.h": "c",
+        "test_db.h": "c",
+        "io.h": "c",
+        "unistd.h": "c",
+        "cstdlib": "c",
+        "stdint.h": "c"
+    },
+    "makefile.configureOnOpen": true
+}
