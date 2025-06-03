@@ -28,7 +28,8 @@
         "io.h": "c",
         "unistd.h": "c",
         "cstdlib": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "defines.h": "c"
     },
     "makefile.configureOnOpen": true
 }

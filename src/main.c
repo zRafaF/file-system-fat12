@@ -23,10 +23,14 @@ int main() {
         printf("Entry %2u: 0x%03X\n", i, entry);
     }
 
+    fat12_directory_s dir = fat12_read_directory_entry(disk, 0);  // Read the root directory entry
+
+    fat12_print_directory_info(dir);
+
     // Sector Buffer
     uint8_t buffer[SECTOR_SIZE];
 
-    fat12_read_cluster(disk, buffer, 1);  // Read first fat12 table cluster
+    fat12_read_cluster(disk, buffer, 19);  // Read first fat12 table cluster
 
     printf("Cluster 1 Data:\n");
     for (int i = 0; i < SECTOR_SIZE; i++) {

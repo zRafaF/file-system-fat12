@@ -9,6 +9,10 @@
 
 #include "defines.h"
 
+#define FAT12_FAT_TABLES_START 1           // FAT12 starts at sector 1
+#define FAT12_NUM_OF_FAT_TABLES_SECTORS 9  // FAT12 can have up to 9 sectors for the FAT table
+#define FAT12_ROOT_DIRECTORY_START 19      // Root directory starts at cluster 19 for FAT12
+
 // Packed para que o compilador não adicione padding entre os campos da estrutura
 typedef struct __attribute__((__packed__)) {
     uint8_t ignore0[11];               // Ignored bytes
@@ -31,8 +35,39 @@ typedef struct __attribute__((__packed__)) {
     char type_of_file_system[8];
 } fat12_boot_sector_s;
 
+typedef struct __attribute__((__packed__)) {
+    char filename[8];
+    char extension[3];
+    uint8_t attributes;         // File attributes
+    uint8_t reserved[2];        // Reserved
+    uint16_t creation_time;     // Creation time
+    uint16_t creation_date;     // Creation date
+    uint16_t last_access_date;  // Last access date
+    uint16_t ignore_in_fat12;
+    uint16_t last_write_time;  // Last modification time
+    uint16_t last_write_date;  // Last modification date
+    uint16_t first_cluster;    // First cluster number
+    uint32_t file_size;        // File size in bytes
+} fat12_directory_s;
+
+typedef struct {
+    uint8_t seconds;  // 5 bits
+    uint8_t minutes;  // 5 bits
+    uint8_t hours;    // 5 bits
+} fat12_time_s;
+
+typedef struct {
+    uint8_t day;    // 5 bits
+    uint8_t month;  // 5 bits
+    uint16_t year;  // 5 bits (year since 1980)
+} fat12_date_s;
+
 fat12_boot_sector_s fat12_read_boot_sector(FILE *disk);
+fat12_directory_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx);
+
 void fat12_print_boot_sector_info(fat12_boot_sector_s bs);
+void fat12_print_directory_info(fat12_directory_s dir);
+
 uint8_t *fat12_read_cluster(FILE *disk, uint8_t *buffer, uint16_t cluster_number);
 
 uint8_t *fat12_load_full_fat_table(FILE *disk);
