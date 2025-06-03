@@ -11,7 +11,18 @@
 
 #define FAT12_FAT_TABLES_START 1           // FAT12 starts at sector 1
 #define FAT12_NUM_OF_FAT_TABLES_SECTORS 9  // FAT12 can have up to 9 sectors for the FAT table
-#define FAT12_ROOT_DIRECTORY_START 19      // Root directory starts at cluster 19 for FAT12
+
+#define FAT12_ROOT_DIRECTORY_START 19               // Root directory starts at cluster 19 for FAT12
+#define FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS 14      // FAT12 root directory can occupy up to 14 sectors
+#define FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR 16  // Maximum number of entries 512 / 32 = 16 entries per sector
+
+// FAT12 entries code map
+#define FAT12_FREE (0x000)            // Free cluster marker
+#define FAT12_RESERVED_BEGIN (0xFF0)  // Reserved cluster marker
+#define FAT12_RESERVED_END (0xFF6)    // Reserved cluster marker
+#define FAT12_BAD (0xFF7)             // Bad cluster marker
+#define FAT12_EOC_BEGIN (0xFF8)       // End of cluster chain marker
+#define FAT12_EOC_END (0xFFF)         // End of cluster chain marker
 
 // Packed para que o compilador não adicione padding entre os campos da estrutura
 typedef struct __attribute__((__packed__)) {

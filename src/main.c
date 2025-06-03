@@ -19,22 +19,23 @@ int main() {
 
     fat12_load_full_fat_table(disk);  // Read the boot sector again to ensure it's loaded
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 8; i++) {
         uint16_t entry = fat12_get_table_entry(i);
         printf("Entry %2u: 0x%03X\n", i, entry);
     }
 
-    fat12_directory_s dir = fat12_read_directory_entry(disk, 0);  // Read the root directory entry
+    for (int i = 0; i < 3; i++) {
+        fat12_directory_s dir = fat12_read_directory_entry(disk, i);  // Read the root directory entry
 
-    fat12_print_directory_info(dir);
-
+        fat12_print_directory_info(dir);
+    }
     // Sector Buffer
     uint8_t buffer[SECTOR_SIZE];
 
     fat12_read_cluster(disk, buffer, 19);  // Read first fat12 table cluster
 
-    printf("Cluster 1 Data:\n");
-    bo_print_buffer(buffer, SECTOR_SIZE);
+    // printf("Cluster 1 Data:\n");
+    // bo_print_buffer(buffer, SECTOR_SIZE);
 
     return 0;
 }

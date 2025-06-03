@@ -30,7 +30,8 @@
         "cstdlib": "c",
         "stdint.h": "c",
         "defines.h": "c",
-        "buffer_operation.h": "c"
+        "buffer_operation.h": "c",
+        "fat12.h": "c"
     },
     "makefile.configureOnOpen": true
 }

@@ -41,12 +41,16 @@ fat12_boot_sector_s fat12_read_boot_sector(FILE *disk) {
 
 fat12_directory_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx) {
     assert(disk != NULL);
-    assert(entry_idx < 512);  // FAT12 directory entries are limited to 512
+    assert(entry_idx < (FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS * FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR));
 
     fat12_directory_s dir_entry;
 
+    // Calculate the sector where the directory entry is located
+    uint16_t sector_idx = FAT12_ROOT_DIRECTORY_START + (entry_idx / FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR);
+    uint16_t entry_offset = entry_idx % FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR;
+
     // Move to the position of the directory entry
-    if (fseek(disk, (SECTOR_SIZE * FAT12_ROOT_DIRECTORY_START) + entry_idx * sizeof(fat12_directory_s), SEEK_SET) != 0) {
+    if (fseek(disk, sector_idx * SECTOR_SIZE + entry_offset * sizeof(fat12_directory_s), SEEK_SET) != 0) {
         perror("Failed to seek to directory entry position");
         exit(EXIT_FAILURE);
     }
