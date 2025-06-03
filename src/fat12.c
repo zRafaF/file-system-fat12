@@ -1,5 +1,9 @@
 #include "fat12.h"
 
+static bool has_loaded_fat_table = false;
+
+static uint8_t fat_table[SECTOR_SIZE * 9];  // FAT12 can have up to 9 sectors for the FAT table
+
 fat12_boot_sector_s fat12_read_boot_sector(FILE *disk) {
     assert(disk != NULL);
 
@@ -24,7 +28,7 @@ void fat12_print_boot_sector_info(fat12_boot_sector_s bs) {
     printf("Max Number of Root Directory Entries: %u\n", bs.max_num_of_root_directory_entries);
     printf("Total Number of Sectors on Disk: %u\n", bs.qnt_of_sectors_on_disk);
     printf("Sectors per FAT: %u\n", bs.sectors_per_fat);
-    printf("Sectors per Track: %u\n", bs.setctors_per_track);
+    printf("Sectors per Track: %u\n", bs.sectors_per_track);
     printf("Number of Heads: %u\n", bs.num_of_heads);
     printf("Total Sector Count for FAT32: %u\n", bs.total_sector_count_for_fat32);
     printf("Boot Signature: 0x%02X\n", bs.boot_signature);
@@ -55,4 +59,51 @@ uint8_t *fat12_read_cluster(FILE *disk, uint8_t *buffer, uint16_t cluster_number
     }
 
     return buffer;
+}
+
+uint8_t *fat12_load_full_fat_table(FILE *disk) {
+    assert(disk != NULL);
+
+    // Move to the start of the FAT table
+    if (fseek(disk, SECTOR_SIZE * 1, SEEK_SET) != 0) {
+        perror("Failed to seek to FAT table position");
+        return NULL;
+    }
+
+    // Read the FAT table into the buffer
+    size_t bytes_read = fread(fat_table, sizeof(uint8_t), SECTOR_SIZE * 9, disk);
+    if (bytes_read != SECTOR_SIZE * 9) {
+        perror("Failed to read FAT table data");
+        return NULL;
+    }
+
+    has_loaded_fat_table = true;  // Mark that the FAT table has been loaded
+
+    return fat_table;
+}
+
+// Reads a FAT12 table entry for a given cluster number.
+uint16_t fat12_get_table_entry(uint16_t entry_idx) {
+    assert(has_loaded_fat_table);  // Ensure the FAT table has been loaded
+    assert(entry_idx < 0xFFF);     // FAT12 entries are 12 bits, so max index is 0xFFF (4095)
+    assert(fat_table != NULL);     // Ensure the FAT table has been loaded
+
+    // Each FAT12 entry is 1.5 bytes, so calculate offset into the table
+    uint32_t byte_offset = (entry_idx * 3) / 2;
+
+    // Read the two bytes that contain the 12-bit entry
+    uint16_t first_byte = fat_table[byte_offset];
+    uint16_t second_byte = fat_table[byte_offset + 1];
+
+    uint16_t entry = 0;
+
+    if (entry_idx % 2 == 0) {
+        // Even index: take low 8 bits from first byte and high 4 bits from second byte
+        entry = (first_byte | ((second_byte & 0x0F) << 8));
+    } else {
+        // Odd index: take high 4 bits from first byte and all 8 bits from second byte
+        entry = ((first_byte >> 4) | (second_byte << 4));
+    }
+
+    return entry;
 }

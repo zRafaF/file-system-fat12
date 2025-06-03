@@ -2,6 +2,7 @@
 #define FAT12_H
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,7 +20,7 @@ typedef struct __attribute__((__packed__)) {
     uint16_t qnt_of_sectors_on_disk;  // Total number of sectors on the disk
     uint8_t ignore21;
     uint16_t sectors_per_fat;
-    uint16_t setctors_per_track;
+    uint16_t sectors_per_track;
     uint16_t num_of_heads;
     uint8_t ignore28[4];
     uint32_t total_sector_count_for_fat32;  // Total sectors for FAT32 (0 for FAT12)
@@ -33,5 +34,9 @@ typedef struct __attribute__((__packed__)) {
 fat12_boot_sector_s fat12_read_boot_sector(FILE *disk);
 void fat12_print_boot_sector_info(fat12_boot_sector_s bs);
 uint8_t *fat12_read_cluster(FILE *disk, uint8_t *buffer, uint16_t cluster_number);
+
+uint8_t *fat12_load_full_fat_table(FILE *disk);
+
+uint16_t fat12_get_table_entry(uint16_t entry_idx);
 
 #endif  // FAT12_H

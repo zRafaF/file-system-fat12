@@ -6,7 +6,7 @@
             "defines": ["_DEBUG", "UNICODE", "_UNICODE"],
             "windowsSdkVersion": "10.0.26100.0",
             "compilerPath": "C:\\ProgramData\\mingw64\\mingw64\\bin\\gcc.exe",
-            "cStandard": "c23",
+            "cStandard": "c99",
             "cppStandard": "c++17",
             "intelliSenseMode": "windows-gcc-x64"
         }
