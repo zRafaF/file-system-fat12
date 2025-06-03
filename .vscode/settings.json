@@ -31,7 +31,8 @@
         "stdint.h": "c",
         "defines.h": "c",
         "buffer_operation.h": "c",
-        "fat12.h": "c"
+        "fat12.h": "c",
+        "stb_ds.h": "c"
     },
     "makefile.configureOnOpen": true
 }

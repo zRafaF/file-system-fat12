@@ -7,6 +7,8 @@
 #include "defines.h"
 #include "fat12.h"
 
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
 int main() {
     FILE *disk = fopen(IMG_PATH, "rb");
     if (disk == NULL) {
@@ -36,6 +38,13 @@ int main() {
 
     // printf("Cluster 1 Data:\n");
     // bo_print_buffer(buffer, SECTOR_SIZE);
+
+    int *array = NULL;
+    arrput(array, 2);
+    arrput(array, 3);
+    arrput(array, 5);
+    for (int i = 0; i < arrlen(array); ++i)
+        printf("%d ", array[i]);
 
     return 0;
 }
