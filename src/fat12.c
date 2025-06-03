@@ -84,26 +84,27 @@ uint8_t *fat12_load_full_fat_table(FILE *disk) {
 
 // Reads a FAT12 table entry for a given cluster number.
 uint16_t fat12_get_table_entry(uint16_t entry_idx) {
-    assert(has_loaded_fat_table);  // Ensure the FAT table has been loaded
-    assert(entry_idx < 0xFFF);     // FAT12 entries are 12 bits, so max index is 0xFFF (4095)
-    assert(fat_table != NULL);     // Ensure the FAT table has been loaded
+    assert(has_loaded_fat_table);
+    assert(entry_idx < 0xFFF);
+    assert(fat_table != NULL);
 
-    // Each FAT12 entry is 1.5 bytes, so calculate offset into the table
+    // Compute byte offset = floor(entry_idx * 1.5)
     uint32_t byte_offset = (entry_idx * 3) / 2;
 
-    // Read the two bytes that contain the 12-bit entry
-    uint16_t first_byte = fat_table[byte_offset];
-    uint16_t second_byte = fat_table[byte_offset + 1];
-
-    uint16_t entry = 0;
-
-    if (entry_idx % 2 == 0) {
-        // Even index: take low 8 bits from first byte and high 4 bits from second byte
-        entry = (first_byte | ((second_byte & 0x0F) << 8));
+    uint16_t value;
+    if ((entry_idx & 1) == 0) {
+        // Even index: take 8 low bits from fat_table[byte_offset]
+        // and 4 low bits from fat_table[byte_offset+1]
+        uint16_t lo = fat_table[byte_offset];
+        uint16_t hi = fat_table[byte_offset + 1] & 0x0F;
+        value = lo | (hi << 8);
     } else {
-        // Odd index: take high 4 bits from first byte and all 8 bits from second byte
-        entry = ((first_byte >> 4) | (second_byte << 4));
+        // Odd index: take 4 high bits from fat_table[byte_offset]
+        // (i.e. bits 4..7 of that byte) and all 8 bits from fat_table[byte_offset+1]
+        uint16_t lo = (fat_table[byte_offset] >> 4) & 0x0F;
+        uint16_t hi = fat_table[byte_offset + 1];
+        value = (lo) | (hi << 4);
     }
 
-    return entry;
+    return (value & 0x0FFF);
 }

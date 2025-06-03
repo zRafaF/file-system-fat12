@@ -18,8 +18,10 @@ int main() {
 
     fat12_load_full_fat_table(disk);  // Read the boot sector again to ensure it's loaded
 
-    uint16_t value = fat12_get_table_entry(1);  // Get the FAT entry for cluster 2
-    printf("FAT entry for 2: %03X\n", value);
+    for (int i = 0; i < 10; i++) {
+        uint16_t entry = fat12_get_table_entry(i);
+        printf("Entry %2u: 0x%03X\n", i, entry);
+    }
 
     // Sector Buffer
     uint8_t buffer[SECTOR_SIZE];
