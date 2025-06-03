@@ -90,9 +90,14 @@ void fat12_print_directory_info(fat12_directory_s dir) {
     printf("Creation Time: %02uh %02um %02us\n", creation_time.hours, creation_time.minutes, creation_time.seconds);
     printf("Creation Date: %02u/%02u/%04u\n", creation_date.day, creation_date.month, creation_date.year);
 
-    printf("Last Access Date: %u\n", dir.last_access_date);
-    printf("Last Write Time: %u\n", dir.last_write_time);
-    printf("Last Write Date: %u\n", dir.last_write_date);
+    fat12_date_s last_access_date = fat12_extract_date(dir.last_access_date);
+    printf("Last Access Date: %02u/%02u/%04u\n", last_access_date.day, last_access_date.month, last_access_date.year);
+
+    fat12_time_s last_write_time = fat12_extract_time(dir.last_write_time);
+    fat12_date_s last_write_date = fat12_extract_date(dir.last_write_date);
+    printf("Last Write Time: %02uh %02um %02us\n", last_write_time.hours, last_write_time.minutes, last_write_time.seconds);
+    printf("Last Write Date: %02u/%02u/%04u\n", last_write_date.day, last_write_date.month, last_write_date.year);
+
     printf("First Cluster: %u\n", dir.first_cluster);
     printf("File Size: %u bytes\n", dir.file_size);
 }
@@ -152,15 +157,15 @@ uint16_t fat12_get_table_entry(uint16_t entry_idx) {
     uint32_t byte_offset = (entry_idx * 3) / 2;
 
     uint16_t value = 0;
-    if ((entry_idx & 1) == 0) {
-        // Even index: take 8 low bits from fat_table[byte_offset]
-        // and 4 low bits from fat_table[byte_offset+1]
+    if ((entry_idx % 2) == 0) {
+        // If entry_idx is even, the first byte contains the low 8 bits
+        // and the second byte contains the high 4 bits.
         uint16_t lo = fat_table[byte_offset];
         uint16_t hi = fat_table[byte_offset + 1] & 0x0F;
         value = lo | (hi << 8);
     } else {
-        // Odd index: take 4 high bits from fat_table[byte_offset]
-        // (i.e. bits 4..7 of that byte) and all 8 bits from fat_table[byte_offset+1]
+        // If entry_idx is odd, the first byte contains the low 4 bits
+        // and the second byte contains the high 8 bits.
         uint16_t lo = (fat_table[byte_offset] >> 4) & 0x0F;
         uint16_t hi = fat_table[byte_offset + 1];
         value = (lo) | (hi << 4);

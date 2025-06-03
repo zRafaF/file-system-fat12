@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "buffer_operation.h"
 #include "defines.h"
 #include "fat12.h"
 
@@ -33,12 +34,7 @@ int main() {
     fat12_read_cluster(disk, buffer, 19);  // Read first fat12 table cluster
 
     printf("Cluster 1 Data:\n");
-    for (int i = 0; i < SECTOR_SIZE; i++) {
-        printf("%02X ", buffer[i]);
-
-        if ((i + 1) % 16 == 0)
-            printf("\n");
-    }
+    bo_print_buffer(buffer, SECTOR_SIZE);
 
     return 0;
 }

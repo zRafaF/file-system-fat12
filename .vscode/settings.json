@@ -29,7 +29,8 @@
         "unistd.h": "c",
         "cstdlib": "c",
         "stdint.h": "c",
-        "defines.h": "c"
+        "defines.h": "c",
+        "buffer_operation.h": "c"
     },
     "makefile.configureOnOpen": true
 }
