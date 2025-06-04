@@ -41,4 +41,4 @@ void menu_back(Menu* menu);
 void menu_quit(Menu* menu);
 char* menu_get_input(const char* prompt);
 
-#endif
+#endif  // CLI_MENU_H

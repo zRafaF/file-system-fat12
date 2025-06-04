@@ -1,3 +1,5 @@
+#define STB_DS_IMPLEMENTATION
+
 #include <assert.h>
 #include <ctype.h>
 #include <stdint.h>
@@ -5,11 +7,9 @@
 #include <stdlib.h>
 
 #include "buffer_operation.h"
+#include "cli_menu.h"
 #include "defines.h"
 #include "fat12.h"
-
-#define STB_DS_IMPLEMENTATION
-#include "cli_menu.h"
 #include "stb_ds.h"
 
 // Menu callbacks
@@ -91,35 +91,35 @@ int main() {
     for (int i = 0; i < arrlen(array); ++i)
         printf("%d ", array[i]);
 
-    Menu* main_menu = menu_create("MAIN MENU", NULL);
+    Menu* main_menu = menu_create("MENU", NULL);
 
-    // Create settings submenu
-    Menu* settings_menu = menu_create("SETTINGS", main_menu);
-    menu_add_item(settings_menu, "Sound Settings", option1);
-    menu_add_item(settings_menu, "Display Settings", option2);
-    menu_add_item(settings_menu, "Back", back_callback);
+    Menu* copy_disk_sys_menu = menu_create("COPIAR DISCO -> SISTEMA", main_menu);
+    menu_add_input(copy_disk_sys_menu, "Caminho de origem", process_input);
+    menu_add_input(copy_disk_sys_menu, "Caminho de destino", process_input);
+    menu_add_item(copy_disk_sys_menu, "Copiar", option1);
+    menu_add_item(copy_disk_sys_menu, "Voltar", back_callback);
 
-    // Create help submenu
-    Menu* help_menu = menu_create("HELP", main_menu);
-    menu_add_item(help_menu, "View Tutorial", option1);
-    menu_add_item(help_menu, "FAQ", option2);
-    menu_add_item(help_menu, "Back", back_callback);
+    Menu* copy_sys_disk_menu = menu_create("COPIAR SISTEMA -> DISCO", main_menu);
+    menu_add_input(copy_sys_disk_menu, "Caminho de origem", process_input);
+    menu_add_input(copy_sys_disk_menu, "Caminho de destino", process_input);
+    menu_add_item(copy_sys_disk_menu, "Copiar", option1);
+    menu_add_item(copy_sys_disk_menu, "Voltar", back_callback);
 
     // Add items to main menu
-    menu_add_item(main_menu, "Start Game", option1);
-    menu_add_submenu(main_menu, "Settings", settings_menu);
-    menu_add_submenu(main_menu, "Help", help_menu);
-    menu_add_input(main_menu, "Enter Player Name", process_input);
-    menu_add_item(main_menu, "Quit", quit_callback);
+    menu_add_item(main_menu, "Montar imagem", option1);
+    menu_add_item(main_menu, "ls-1", option2);
+    menu_add_item(main_menu, "ls", option2);
+    menu_add_submenu(main_menu, "Copiar disco -> sistema", copy_disk_sys_menu);
+    menu_add_submenu(main_menu, "Copiar sistema -> disco", copy_sys_disk_menu);
+    menu_add_item(main_menu, "Sair", quit_callback);
 
     // Run the menu system
     menu_run(main_menu);
 
     // Cleanup
-    menu_free(help_menu);
-    menu_free(settings_menu);
+    menu_free(copy_disk_sys_menu);
     menu_free(main_menu);
 
-    printf("\nGoodbye!\n");
+    printf("\nObrigado por usar!\n");
     return 0;
 }

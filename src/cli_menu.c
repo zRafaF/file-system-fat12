@@ -156,7 +156,7 @@ static void print_menu(Menu* menu, int selected) {
             printf("  %s\n", menu->items[i].title);
         }
     }
-    printf("\nUse arrow keys to navigate, Enter to select");
+    printf("\nUse as setas para navegar e Enter para selecionar.");
     fflush(stdout);  // Ensure output is flushed immediately
 }
 
@@ -234,7 +234,7 @@ void menu_run(Menu* menu) {
                     clear_screen();
                     item->callback(menu);
                     if (!menu->should_quit) {
-                        printf("\n\nPress any key to continue...");
+                        printf("\n\nPressione qualquer tecla para continuar...");
                         fflush(stdout);
                         read_key();
                     }
@@ -249,11 +249,11 @@ void menu_run(Menu* menu) {
 
                 case MENU_ITEM_INPUT:
                     clear_screen();
-                    char* input = menu_get_input("Enter text: ");
+                    char* input = menu_get_input("Insira: ");
                     item->input_callback(menu, input);
                     free(input);
                     if (!menu->should_quit) {
-                        printf("\nPress any key to continue...");
+                        printf("\nPressione qualquer tecla para continuar...");
                         fflush(stdout);
                         read_key();
                     }
