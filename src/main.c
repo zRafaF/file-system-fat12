@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,8 +13,14 @@
 #include "stb_ds.h"
 
 // Menu callbacks
-void option1(Menu* menu) { printf("Option 1 selected!\n"); }
-void option2(Menu* menu) { printf("Option 2 chosen!\n"); }
+void option1(Menu* menu) {
+    UNUSED(menu);
+    printf("Option 1 selected!\n");
+}
+void option2(Menu* menu) {
+    UNUSED(menu);
+    printf("Option 2 chosen!\n");
+}
 
 // Back callback
 void back_callback(Menu* menu) {
@@ -27,6 +34,8 @@ void quit_callback(Menu* menu) {
 
 // Input processing callback
 void process_input(Menu* menu, const char* input) {
+    UNUSED(menu);
+
     // Create a copy to process
     char* processed = strdup(input);
     char* src = processed;
@@ -34,7 +43,7 @@ void process_input(Menu* menu, const char* input) {
 
     // Remove all 'a' characters (case-insensitive)
     while (*src) {
-        if (tolower(*src) != 'a') {
+        if (*src != 'a') {
             *dst++ = *src;
         }
         src++;
