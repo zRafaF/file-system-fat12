@@ -171,13 +171,36 @@ char* menu_get_input(const char* prompt) {
     int len = 0;
     int c;
 
+#ifdef __linux__
+    // Linux-specific handling with visible input
+    struct termios orig, new;
+    tcgetattr(STDIN_FILENO, &orig);
+    new = orig;
+    new.c_lflag |= ECHO;  // Make input visible
+    tcsetattr(STDIN_FILENO, TCSANOW, &new);
+#endif
+
     while ((c = getchar()) != '\n' && c != EOF) {
+        if (c == 127 || c == 8) {  // Backspace
+            if (len > 0) {
+                len--;
+                printf("\b \b");  // Erase character from terminal
+                fflush(stdout);
+            }
+            continue;
+        }
+
         if (len + 1 >= capacity) {
             capacity = capacity == 0 ? 32 : capacity * 2;
             input = realloc(input, capacity);
         }
         input[len++] = c;
     }
+
+#ifdef __linux__
+    // Restore original terminal settings
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig);
+#endif
 
     if (input) {
         input[len] = '\0';
