@@ -25,10 +25,26 @@ void quit_callback(Menu* menu) {
     menu_quit(menu);
 }
 
-// Input callback
-char* input_callback(const char* prompt) {
-    return menu_get_input(prompt);
+// Input processing callback
+void process_input(Menu* menu, const char* input) {
+    // Create a copy to process
+    char* processed = strdup(input);
+    char* src = processed;
+    char* dst = processed;
+
+    // Remove all 'a' characters (case-insensitive)
+    while (*src) {
+        if (tolower(*src) != 'a') {
+            *dst++ = *src;
+        }
+        src++;
+    }
+    *dst = '\0';
+
+    printf("Processed input: %s\n", processed);
+    free(processed);
 }
+
 int main() {
     FILE* disk = fopen(IMG_PATH, "rb");
     if (disk == NULL) {
@@ -84,7 +100,7 @@ int main() {
     menu_add_item(main_menu, "Start Game", option1);
     menu_add_submenu(main_menu, "Settings", settings_menu);
     menu_add_submenu(main_menu, "Help", help_menu);
-    menu_add_input(main_menu, "Enter Player Name", input_callback);
+    menu_add_input(main_menu, "Enter Player Name", process_input);
     menu_add_item(main_menu, "Quit", quit_callback);
 
     // Run the menu system
@@ -96,7 +112,5 @@ int main() {
     menu_free(main_menu);
 
     printf("\nGoodbye!\n");
-    return 0;
-
     return 0;
 }

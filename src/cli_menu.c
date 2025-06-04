@@ -16,7 +16,6 @@
 #include <unistd.h>
 #endif
 
-// Internal functions
 static void clear_screen();
 static void print_menu(Menu* menu, int selected);
 static int read_key();
@@ -70,7 +69,6 @@ void menu_back(Menu* menu) {
 }
 
 void menu_quit(Menu* menu) {
-    // Propagate quit to top-level menu
     Menu* top = menu;
     while (top->parent) {
         top = top->parent;
@@ -80,16 +78,16 @@ void menu_quit(Menu* menu) {
 
 #ifdef _WIN32
 static void enable_raw_mode() {
-    // No special handling needed for Windows in this implementation
+    // Nothing needed for Windows
 }
 
 static void disable_raw_mode() {
-    // No special handling
+    // Nothing needed for Windows
 }
 
 static int read_key() {
     int ch = _getch();
-    if (ch == 0 || ch == 224) {  // Arrow keys
+    if (ch == 0 || ch == 224) {
         switch (_getch()) {
             case 72:
                 return 'A';  // Up
@@ -149,7 +147,7 @@ static void clear_screen() {
 
 static void print_menu(Menu* menu, int selected) {
     clear_screen();
-    printf("===== %s =====\n\n", menu->title);
+    printf("\n===== %s =====\n\n", menu->title);
 
     for (int i = 0; i < arrlen(menu->items); i++) {
         if (i == selected) {
@@ -159,15 +157,15 @@ static void print_menu(Menu* menu, int selected) {
         }
     }
     printf("\nUse arrow keys to navigate, Enter to select");
+    fflush(stdout);  // Ensure output is flushed immediately
 }
 
 char* menu_get_input(const char* prompt) {
-    disable_raw_mode();  // Return to normal terminal mode for input
+    disable_raw_mode();
 
     printf("%s", prompt);
     fflush(stdout);
 
-    // Read input line
     char* input = NULL;
     int capacity = 0;
     int len = 0;
@@ -187,7 +185,7 @@ char* menu_get_input(const char* prompt) {
         input = strdup("");
     }
 
-    enable_raw_mode();  // Return to raw mode for menu navigation
+    enable_raw_mode();
     return input;
 }
 
@@ -214,6 +212,7 @@ void menu_run(Menu* menu) {
                     item->callback(menu);
                     if (!menu->should_quit) {
                         printf("\n\nPress any key to continue...");
+                        fflush(stdout);
                         read_key();
                     }
                     break;
@@ -221,18 +220,20 @@ void menu_run(Menu* menu) {
                 case MENU_ITEM_SUBMENU:
                     clear_screen();
                     menu_run(item->submenu);
-                    // Reset should_quit after returning from submenu
-                    menu->should_quit = 0;
-                    selected = 0;
+                    menu->should_quit = 0;  // Reset after returning
+                    selected = 0;           // Reset selection
                     break;
 
                 case MENU_ITEM_INPUT:
                     clear_screen();
-                    char* input = item->input_callback("Enter text: ");
-                    printf("\nYou entered: %s\n", input);
+                    char* input = menu_get_input("Enter text: ");
+                    item->input_callback(menu, input);
                     free(input);
-                    printf("\nPress any key to continue...");
-                    read_key();
+                    if (!menu->should_quit) {
+                        printf("\nPress any key to continue...");
+                        fflush(stdout);
+                        read_key();
+                    }
                     break;
             }
         }
