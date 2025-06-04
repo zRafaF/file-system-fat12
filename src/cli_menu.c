@@ -1,5 +1,6 @@
 #include "cli_menu.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,17 +16,43 @@
 #include <unistd.h>
 #endif
 
-Menu* menu_create(const char* title) {
+// Internal functions
+static void clear_screen();
+static void print_menu(Menu* menu, int selected);
+static int read_key();
+static void enable_raw_mode();
+static void disable_raw_mode();
+
+Menu* menu_create(const char* title, Menu* parent) {
     Menu* menu = malloc(sizeof(Menu));
     menu->title = strdup(title);
+    menu->parent = parent;
     menu->items = NULL;
+    menu->should_quit = 0;
     return menu;
 }
 
 void menu_add_item(Menu* menu, const char* title, MenuCallback callback) {
     MenuItem item = {
         .title = strdup(title),
+        .type = MENU_ITEM_REGULAR,
         .callback = callback};
+    arrput(menu->items, item);
+}
+
+void menu_add_submenu(Menu* menu, const char* title, Menu* submenu) {
+    MenuItem item = {
+        .title = strdup(title),
+        .type = MENU_ITEM_SUBMENU,
+        .submenu = submenu};
+    arrput(menu->items, item);
+}
+
+void menu_add_input(Menu* menu, const char* title, InputCallback input_callback) {
+    MenuItem item = {
+        .title = strdup(title),
+        .type = MENU_ITEM_INPUT,
+        .input_callback = input_callback};
     arrput(menu->items, item);
 }
 
@@ -38,9 +65,26 @@ void menu_free(Menu* menu) {
     free(menu);
 }
 
+void menu_back(Menu* menu) {
+    menu->should_quit = 1;
+}
+
+void menu_quit(Menu* menu) {
+    // Propagate quit to top-level menu
+    Menu* top = menu;
+    while (top->parent) {
+        top = top->parent;
+    }
+    top->should_quit = 1;
+}
+
 #ifdef _WIN32
 static void enable_raw_mode() {
     // No special handling needed for Windows in this implementation
+}
+
+static void disable_raw_mode() {
+    // No special handling
 }
 
 static int read_key() {
@@ -74,13 +118,15 @@ static void enable_raw_mode() {
 }
 
 static int read_key() {
-    char seq[3];
-    if (read(STDIN_FILENO, &seq[0], 1) != 1) return 0;
-    if (seq[0] == '\033') {
+    char c;
+    if (read(STDIN_FILENO, &c, 1) != 1) return 0;
+
+    if (c == '\033') {
+        char seq[2];
+        if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\033';
         if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\033';
-        if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\033';
-        if (seq[1] == '[') {
-            switch (seq[2]) {
+        if (seq[0] == '[') {
+            switch (seq[1]) {
                 case 'A':
                     return 'A';  // Up arrow
                 case 'B':
@@ -89,7 +135,7 @@ static int read_key() {
         }
         return '\033';
     }
-    return seq[0];
+    return c;
 }
 #endif
 
@@ -115,13 +161,43 @@ static void print_menu(Menu* menu, int selected) {
     printf("\nUse arrow keys to navigate, Enter to select");
 }
 
+char* menu_get_input(const char* prompt) {
+    disable_raw_mode();  // Return to normal terminal mode for input
+
+    printf("%s", prompt);
+    fflush(stdout);
+
+    // Read input line
+    char* input = NULL;
+    int capacity = 0;
+    int len = 0;
+    int c;
+
+    while ((c = getchar()) != '\n' && c != EOF) {
+        if (len + 1 >= capacity) {
+            capacity = capacity == 0 ? 32 : capacity * 2;
+            input = realloc(input, capacity);
+        }
+        input[len++] = c;
+    }
+
+    if (input) {
+        input[len] = '\0';
+    } else {
+        input = strdup("");
+    }
+
+    enable_raw_mode();  // Return to raw mode for menu navigation
+    return input;
+}
+
 void menu_run(Menu* menu) {
     if (arrlen(menu->items) == 0) return;
 
     int selected = 0;
     enable_raw_mode();
 
-    while (1) {
+    while (!menu->should_quit) {
         print_menu(menu, selected);
         int key = read_key();
 
@@ -130,12 +206,38 @@ void menu_run(Menu* menu) {
         } else if (key == 'B') {  // Down
             selected = (selected < arrlen(menu->items) - 1) ? selected + 1 : 0;
         } else if (key == '\r' || key == '\n') {  // Enter
-            clear_screen();
-            menu->items[selected].callback();
-            printf("\n\nPress any key to continue...");
-            read_key();
-        } else if (key == 'q' || key == 'Q') {
-            break;
+            MenuItem* item = &menu->items[selected];
+
+            switch (item->type) {
+                case MENU_ITEM_REGULAR:
+                    clear_screen();
+                    item->callback(menu);
+                    if (!menu->should_quit) {
+                        printf("\n\nPress any key to continue...");
+                        read_key();
+                    }
+                    break;
+
+                case MENU_ITEM_SUBMENU:
+                    clear_screen();
+                    menu_run(item->submenu);
+                    // Reset should_quit after returning from submenu
+                    menu->should_quit = 0;
+                    selected = 0;
+                    break;
+
+                case MENU_ITEM_INPUT:
+                    clear_screen();
+                    char* input = item->input_callback("Enter text: ");
+                    printf("\nYou entered: %s\n", input);
+                    free(input);
+                    printf("\nPress any key to continue...");
+                    read_key();
+                    break;
+            }
         }
     }
+
+    // Reset quit flag when returning to parent
+    menu->should_quit = 0;
 }

@@ -11,15 +11,26 @@
 #include "cli_menu.h"
 #include "stb_ds.h"
 
-void option1() { printf("Option 1 selected!\n"); }
-void option2() { printf("Option 2 chosen!\n"); }
-void option3() { printf("Option 3 picked!\n"); }
-void quit() {
-    exit(0);
+// Menu callbacks
+void option1(Menu* menu) { printf("Option 1 selected!\n"); }
+void option2(Menu* menu) { printf("Option 2 chosen!\n"); }
+
+// Back callback
+void back_callback(Menu* menu) {
+    menu_back(menu);
 }
 
+// Quit callback
+void quit_callback(Menu* menu) {
+    menu_quit(menu);
+}
+
+// Input callback
+char* input_callback(const char* prompt) {
+    return menu_get_input(prompt);
+}
 int main() {
-    FILE *disk = fopen(IMG_PATH, "rb");
+    FILE* disk = fopen(IMG_PATH, "rb");
     if (disk == NULL) {
         perror("Failed to open disk image");
         return 1;
@@ -48,22 +59,44 @@ int main() {
     // printf("Cluster 1 Data:\n");
     // bo_print_buffer(buffer, SECTOR_SIZE);
 
-    int *array = NULL;
+    int* array = NULL;
     arrput(array, 2);
     arrput(array, 3);
     arrput(array, 5);
     for (int i = 0; i < arrlen(array); ++i)
         printf("%d ", array[i]);
 
-    Menu *main_menu = menu_create("MAIN MENU");
+    Menu* main_menu = menu_create("MAIN MENU", NULL);
 
-    menu_add_item(main_menu, "Start", option1);
-    menu_add_item(main_menu, "Settings", option2);
-    menu_add_item(main_menu, "Help", option3);
-    menu_add_item(main_menu, "Quit", quit);
+    // Create settings submenu
+    Menu* settings_menu = menu_create("SETTINGS", main_menu);
+    menu_add_item(settings_menu, "Sound Settings", option1);
+    menu_add_item(settings_menu, "Display Settings", option2);
+    menu_add_item(settings_menu, "Back", back_callback);
 
+    // Create help submenu
+    Menu* help_menu = menu_create("HELP", main_menu);
+    menu_add_item(help_menu, "View Tutorial", option1);
+    menu_add_item(help_menu, "FAQ", option2);
+    menu_add_item(help_menu, "Back", back_callback);
+
+    // Add items to main menu
+    menu_add_item(main_menu, "Start Game", option1);
+    menu_add_submenu(main_menu, "Settings", settings_menu);
+    menu_add_submenu(main_menu, "Help", help_menu);
+    menu_add_input(main_menu, "Enter Player Name", input_callback);
+    menu_add_item(main_menu, "Quit", quit_callback);
+
+    // Run the menu system
     menu_run(main_menu);
+
+    // Cleanup
+    menu_free(help_menu);
+    menu_free(settings_menu);
     menu_free(main_menu);
+
+    printf("\nGoodbye!\n");
+    return 0;
 
     return 0;
 }
