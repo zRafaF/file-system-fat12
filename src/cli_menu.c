@@ -167,6 +167,8 @@ static void print_menu(Menu* menu, int selected) {
 }
 
 char* menu_get_input(const char* prompt, int visible) {
+    (void)visible;  // Silence “unused parameter” warning
+
     disable_raw_mode();
 
     printf("%s", prompt);
@@ -178,11 +180,11 @@ char* menu_get_input(const char* prompt, int visible) {
     int c;
 
 #ifdef __linux__
-    // Linux-specific handling with visible input
+    // On Linux, re‐enable echo for visible input
     struct termios orig, new;
     tcgetattr(STDIN_FILENO, &orig);
     new = orig;
-    new.c_lflag |= ECHO;  // Make input visible
+    new.c_lflag |= ECHO;
     tcsetattr(STDIN_FILENO, TCSANOW, &new);
 #endif
 
@@ -190,12 +192,11 @@ char* menu_get_input(const char* prompt, int visible) {
         if (c == 127 || c == 8) {  // Backspace
             if (len > 0) {
                 len--;
-                printf("\b \b");  // Erase character from terminal
+                printf("\b \b");
                 fflush(stdout);
             }
             continue;
         }
-
         if (len + 1 >= capacity) {
             capacity = capacity == 0 ? 32 : capacity * 2;
             input = realloc(input, capacity);
@@ -204,7 +205,6 @@ char* menu_get_input(const char* prompt, int visible) {
     }
 
 #ifdef __linux__
-    // Restore original terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &orig);
 #endif
 
@@ -227,7 +227,7 @@ void menu_add_flow(Menu* menu, const char* title, MenuFlow* flow) {
     arrput(menu->items, item);
 }
 
-// [Flow‐related functions unchanged except any minor housekeeping]
+// ───────────── Flow Management ─────────────
 
 MenuFlow* flow_create(const char* title,
                       FlowStepCallback on_complete,
@@ -290,7 +290,8 @@ void flow_cancel(MenuFlow* flow) {
     }
 }
 
-// Updated menu_run to handle flow items and propagate selection
+// ───────────── Main Loop for Each Menu ─────────────
+
 void menu_run(Menu* menu) {
     if (arrlen(menu->items) == 0) return;
 
@@ -315,12 +316,12 @@ void menu_run(Menu* menu) {
                     if (item->callback) {
                         item->callback(menu);
                     }
-                    // If inside a flow step (user_data != NULL), exit this menu_run so the flow can advance.
+                    // If this menu is part of a flow, exit immediately so the flow logic can move on.
                     if (menu->user_data) {
                         menu->should_quit = 1;
                         break;
                     }
-                    // Otherwise, stay in this menu and wait for a keypress
+                    // Otherwise, wait for any key before redrawing
                     if (!menu->should_quit) {
                         printf("\n\nPress any key to continue...");
                         fflush(stdout);
@@ -332,7 +333,7 @@ void menu_run(Menu* menu) {
                 case MENU_ITEM_SUBMENU: {
                     clear_screen();
                     menu_run(item->submenu);
-                    // After returning from the submenu, reset quit and selection
+                    // After returning from submenu, reset quit/selection so this parent redraws
                     menu->should_quit = 0;
                     selected = 0;
                     break;
@@ -345,7 +346,7 @@ void menu_run(Menu* menu) {
                         item->input_callback(menu, input);
                     }
                     free(input);
-                    // If inside a flow step, exit so next step runs
+                    // If part of a flow, exit so next step can run
                     if (menu->user_data) {
                         menu->should_quit = 1;
                         break;
@@ -360,9 +361,9 @@ void menu_run(Menu* menu) {
 
                 case MENU_ITEM_FLOW: {
                     clear_screen();
-                    // item->flow is the MenuFlow*
+                    // Start (or re‐start) the flow. flow_start() will take care of running step 0,1,2...
                     flow_start(item->flow);
-                    // Ensure we reset quit and selection so main menu redraws
+                    // Once flow completes or cancels, we come back here—redraw parent
                     menu->should_quit = 0;
                     selected = 0;
                     break;
@@ -371,6 +372,6 @@ void menu_run(Menu* menu) {
         }
     }
 
-    // Reset should_quit so that if parent wants to keep running, it can
+    // When quitting this menu, reset should_quit so that a parent menu can continue if needed
     menu->should_quit = 0;
 }
