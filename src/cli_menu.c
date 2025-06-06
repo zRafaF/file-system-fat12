@@ -160,7 +160,7 @@ static void print_menu(Menu* menu, int selected) {
     fflush(stdout);  // Ensure output is flushed immediately
 }
 
-char* menu_get_input(const char* prompt) {
+char* menu_get_input(const char* prompt, int visible) {
     disable_raw_mode();
 
     printf("%s", prompt);
@@ -212,6 +212,80 @@ char* menu_get_input(const char* prompt) {
     return input;
 }
 
+void menu_add_flow(Menu* menu, const char* title, MenuFlow* flow) {
+    MenuItem item = {
+        .title = strdup(title),
+        .type = MENU_ITEM_FLOW,
+        .flow = flow,
+        .selected = 0};
+    arrput(menu->items, item);
+}
+
+// [Other existing functions remain the same until flow functions]
+
+MenuFlow* flow_create(const char* title,
+                      FlowStepCallback on_complete,
+                      FlowStepCallback on_cancel) {
+    MenuFlow* flow = malloc(sizeof(MenuFlow));
+    flow->title = strdup(title);
+    flow->steps = NULL;
+    flow->current_step = 0;
+    flow->data = NULL;
+    flow->on_complete = on_complete;
+    flow->on_cancel = on_cancel;
+    return flow;
+}
+
+void flow_add_step(MenuFlow* flow, Menu* step) {
+    step->user_data = flow;
+    arrput(flow->steps, step);
+}
+
+void flow_start(MenuFlow* flow) {
+    if (arrlen(flow->steps) > 0) {
+        flow->current_step = 0;
+        menu_run(flow->steps[0]);
+    }
+}
+
+void flow_free(MenuFlow* flow) {
+    free(flow->title);
+    // Note: The menus themselves should be freed separately
+    arrfree(flow->steps);
+    free(flow);
+}
+
+void flow_next_step(MenuFlow* flow) {
+    if (flow->current_step + 1 < arrlen(flow->steps)) {
+        flow->current_step++;
+        menu_run(flow->steps[flow->current_step]);
+    } else {
+        flow_complete(flow);
+    }
+}
+
+void flow_previous_step(MenuFlow* flow) {
+    if (flow->current_step > 0) {
+        flow->current_step--;
+        menu_run(flow->steps[flow->current_step]);
+    } else {
+        flow_cancel(flow);
+    }
+}
+
+void flow_complete(MenuFlow* flow) {
+    if (flow->on_complete) {
+        flow->on_complete(flow);
+    }
+}
+
+void flow_cancel(MenuFlow* flow) {
+    if (flow->on_cancel) {
+        flow->on_cancel(flow);
+    }
+}
+
+// Updated menu_run to handle flow items
 void menu_run(Menu* menu) {
     if (arrlen(menu->items) == 0) return;
 
@@ -234,7 +308,7 @@ void menu_run(Menu* menu) {
                     clear_screen();
                     item->callback(menu);
                     if (!menu->should_quit) {
-                        printf("\n\nPressione qualquer tecla para continuar...");
+                        printf("\n\nPress any key to continue...");
                         fflush(stdout);
                         read_key();
                     }
@@ -243,25 +317,31 @@ void menu_run(Menu* menu) {
                 case MENU_ITEM_SUBMENU:
                     clear_screen();
                     menu_run(item->submenu);
-                    menu->should_quit = 0;  // Reset after returning
-                    selected = 0;           // Reset selection
+                    menu->should_quit = 0;
+                    selected = 0;
                     break;
 
                 case MENU_ITEM_INPUT:
                     clear_screen();
-                    char* input = menu_get_input("Insira: ");
+                    char* input = menu_get_input("Enter text: ", 1);
                     item->input_callback(menu, input);
                     free(input);
                     if (!menu->should_quit) {
-                        printf("\nPressione qualquer tecla para continuar...");
+                        printf("\nPress any key to continue...");
                         fflush(stdout);
                         read_key();
                     }
+                    break;
+
+                case MENU_ITEM_FLOW:
+                    clear_screen();
+                    flow_start(item->flow);
+                    menu->should_quit = 0;
+                    selected = 0;
                     break;
             }
         }
     }
 
-    // Reset quit flag when returning to parent
     menu->should_quit = 0;
 }

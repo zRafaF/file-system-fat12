@@ -62,15 +62,15 @@ typedef struct __attribute__((__packed__)) {
 } fat12_directory_s;
 
 typedef struct {
-    uint8_t seconds;  // 5 bits
-    uint8_t minutes;  // 5 bits
-    uint8_t hours;    // 5 bits
+    uint8_t seconds;
+    uint8_t minutes;
+    uint8_t hours;
 } fat12_time_s;
 
 typedef struct {
-    uint8_t day;    // 5 bits
-    uint8_t month;  // 5 bits
-    uint16_t year;  // 5 bits (year since 1980)
+    uint8_t day;
+    uint8_t month;
+    uint16_t year;
 } fat12_date_s;
 
 fat12_boot_sector_s fat12_read_boot_sector(FILE *disk);

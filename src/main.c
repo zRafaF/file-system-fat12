@@ -12,114 +12,141 @@
 #include "fat12.h"
 #include "stb_ds.h"
 
-// Menu callbacks
-void option1(Menu* menu) {
-    UNUSED(menu);
-    printf("Option 1 selected!\n");
+typedef struct {
+    int move_type;  // 0=copy, 1=cut
+    char* origin_path;
+    char* output_path;
+} MoveContext;
+
+// Callbacks
+void back_callback(Menu* menu) { menu_back(menu); }
+void quit_callback(Menu* menu) { menu_quit(menu); }
+
+// Flow step handlers
+void handle_move_type(Menu* menu) {
+    MenuFlow* flow = (MenuFlow*)menu->user_data;
+    MoveContext* ctx = (MoveContext*)flow->data;
+
+    ctx->move_type = menu->selected_index;  // 0=Copy, 1=Cut
+    flow_next_step(flow);
 }
-void option2(Menu* menu) {
-    UNUSED(menu);
-    printf("Option 2 chosen!\n");
+
+void handle_origin_path(Menu* menu, const char* input) {
+    MenuFlow* flow = (MenuFlow*)menu->user_data;
+    MoveContext* ctx = (MoveContext*)flow->data;
+
+    if (ctx->origin_path) free(ctx->origin_path);
+    ctx->origin_path = strdup(input);
+    flow_next_step(flow);
 }
 
-// Back callback
-void back_callback(Menu* menu) {
-    menu_back(menu);
+void handle_output_path(Menu* menu, const char* input) {
+    MenuFlow* flow = (MenuFlow*)menu->user_data;
+    MoveContext* ctx = (MoveContext*)flow->data;
+
+    if (ctx->output_path) free(ctx->output_path);
+    ctx->output_path = strdup(input);
+    flow_next_step(flow);
 }
 
-// Quit callback
-void quit_callback(Menu* menu) {
-    menu_quit(menu);
+void handle_confirm(Menu* menu) {
+    MenuFlow* flow = (MenuFlow*)menu->user_data;
+    flow_complete(flow);
 }
 
-// Input processing callback
-void process_input(Menu* menu, const char* input) {
-    UNUSED(menu);
+void handle_cancel(Menu* menu) {
+    MenuFlow* flow = (MenuFlow*)menu->user_data;
+    flow_cancel(flow);
+}
 
-    // Create a copy to process
-    char* processed = strdup(input);
-    char* src = processed;
-    char* dst = processed;
+// Completion handlers
+void move_complete(MenuFlow* flow) {
+    MoveContext* ctx = (MoveContext*)flow->data;
+    printf("\nOperation completed:\n");
+    printf("Type: %s\n", ctx->move_type ? "Cut" : "Copy");
+    printf("Origin: %s\n", ctx->origin_path);
+    printf("Destination: %s\n", ctx->output_path);
 
-    // Remove all 'a' characters (case-insensitive)
-    while (*src) {
-        if (*src != 'a') {
-            *dst++ = *src;
-        }
-        src++;
-    }
-    *dst = '\0';
+    // Cleanup
+    free(ctx->origin_path);
+    free(ctx->output_path);
+    free(ctx);
+    flow_free(flow);
 
-    printf("Processed input: %s\n", processed);
-    free(processed);
+    printf("\nPress any key to continue...");
+    getchar();
+}
+
+void move_cancel(MenuFlow* flow) {
+    MoveContext* ctx = (MoveContext*)flow->data;
+    printf("\nOperation cancelled\n");
+
+    // Cleanup
+    if (ctx->origin_path) free(ctx->origin_path);
+    if (ctx->output_path) free(ctx->output_path);
+    free(ctx);
+    flow_free(flow);
+
+    printf("\nPress any key to continue...");
+    getchar();
+}
+
+void setup_move_flow(Menu* parent_menu) {
+    // Create context
+    MoveContext* ctx = malloc(sizeof(MoveContext));
+    ctx->move_type = -1;
+    ctx->origin_path = NULL;
+    ctx->output_path = NULL;
+
+    // Create flow
+    MenuFlow* flow = flow_create("Move File", move_complete, move_cancel);
+    flow->data = ctx;
+
+    // Create steps
+    Menu* step1 = menu_create("Select Move Type", NULL);
+    menu_add_item(step1, "Copy", handle_move_type);
+    menu_add_item(step1, "Cut", handle_move_type);
+    menu_add_item(step1, "Back", back_callback);
+
+    Menu* step2 = menu_create("Enter Origin Path", NULL);
+    menu_add_input(step2, "Path: ", handle_origin_path);
+    menu_add_item(step2, "Back", back_callback);
+
+    Menu* step3 = menu_create("Enter Output Path", NULL);
+    menu_add_input(step3, "Path: ", handle_output_path);
+    menu_add_item(step3, "Back", back_callback);
+
+    Menu* step4 = menu_create("Confirm", NULL);
+    menu_add_item(step4, "Confirm Operation", handle_confirm);
+    menu_add_item(step4, "Cancel", handle_cancel);
+
+    // Add steps to flow
+    flow_add_step(flow, step1);
+    flow_add_step(flow, step2);
+    flow_add_step(flow, step3);
+    flow_add_step(flow, step4);
+
+    // Add flow to parent menu
+    menu_add_flow(parent_menu, "Move File", flow);
 }
 
 int main() {
-    FILE* disk = fopen(IMG_PATH, "rb");
-    if (disk == NULL) {
-        perror("Failed to open disk image");
-        return 1;
-    }
+    Menu* main_menu = menu_create("Main Menu", NULL);
 
-    fat12_boot_sector_s boot_sector = fat12_read_boot_sector(disk);
-    fat12_print_boot_sector_info(boot_sector);
+    // Add regular items
+    menu_add_item(main_menu, "Option 1", NULL);
+    menu_add_item(main_menu, "Option 2", NULL);
 
-    fat12_load_full_fat_table(disk);  // Read the boot sector again to ensure it's loaded
+    // Add the move file flow
+    setup_move_flow(main_menu);
 
-    for (int i = 0; i < 8; i++) {
-        uint16_t entry = fat12_get_table_entry(i);
-        printf("Entry %2u: 0x%03X\n", i, entry);
-    }
+    // Add quit option
+    menu_add_item(main_menu, "Quit", quit_callback);
 
-    for (int i = 0; i < 3; i++) {
-        fat12_directory_s dir = fat12_read_directory_entry(disk, i);  // Read the root directory entry
-
-        fat12_print_directory_info(dir);
-    }
-    // Sector Buffer
-    uint8_t buffer[SECTOR_SIZE];
-
-    fat12_read_cluster(disk, buffer, 19);  // Read first fat12 table cluster
-
-    // printf("Cluster 1 Data:\n");
-    // bo_print_buffer(buffer, SECTOR_SIZE);
-
-    int* array = NULL;
-    arrput(array, 2);
-    arrput(array, 3);
-    arrput(array, 5);
-    for (int i = 0; i < arrlen(array); ++i)
-        printf("%d ", array[i]);
-
-    Menu* main_menu = menu_create("MENU", NULL);
-
-    Menu* copy_disk_sys_menu = menu_create("COPIAR DISCO -> SISTEMA", main_menu);
-    menu_add_input(copy_disk_sys_menu, "Caminho de origem", process_input);
-    menu_add_input(copy_disk_sys_menu, "Caminho de destino", process_input);
-    menu_add_item(copy_disk_sys_menu, "Copiar", option1);
-    menu_add_item(copy_disk_sys_menu, "Voltar", back_callback);
-
-    Menu* copy_sys_disk_menu = menu_create("COPIAR SISTEMA -> DISCO", main_menu);
-    menu_add_input(copy_sys_disk_menu, "Caminho de origem", process_input);
-    menu_add_input(copy_sys_disk_menu, "Caminho de destino", process_input);
-    menu_add_item(copy_sys_disk_menu, "Copiar", option1);
-    menu_add_item(copy_sys_disk_menu, "Voltar", back_callback);
-
-    // Add items to main menu
-    menu_add_item(main_menu, "Montar imagem", option1);
-    menu_add_item(main_menu, "ls-1", option2);
-    menu_add_item(main_menu, "ls", option2);
-    menu_add_submenu(main_menu, "Copiar disco -> sistema", copy_disk_sys_menu);
-    menu_add_submenu(main_menu, "Copiar sistema -> disco", copy_sys_disk_menu);
-    menu_add_item(main_menu, "Sair", quit_callback);
-
-    // Run the menu system
+    // Run menu system
     menu_run(main_menu);
 
     // Cleanup
-    menu_free(copy_disk_sys_menu);
     menu_free(main_menu);
-
-    printf("\nObrigado por usar!\n");
     return 0;
 }
