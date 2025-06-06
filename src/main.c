@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "buffer_operation.h"
 #include "cli_menu.h"
@@ -13,57 +14,83 @@
 #include "stb_ds.h"
 
 typedef struct {
-    int move_type;  // 0=copy, 1=cut
+    int move_type;  // 0 = Copy, 1 = Cut
     char* origin_path;
     char* output_path;
 } MoveContext;
 
-// Callbacks
-void back_callback(Menu* menu) { menu_back(menu); }
-void quit_callback(Menu* menu) { menu_quit(menu); }
+//----------------------------------------------------------------
+// Callbacks for “Back” and “Quit” in non‐flow menus:
+void back_callback(Menu* menu) {
+    menu_back(menu);
+}
 
-// Flow step handlers
+void quit_callback(Menu* menu) {
+    menu_quit(menu);
+}
+
+//----------------------------------------------------------------
+// Flow‐step callbacks:
+
+// Step 1: user picks “Copy” (index=0) or “Cut” (index=1)
 void handle_move_type(Menu* menu) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
     MoveContext* ctx = (MoveContext*)flow->data;
 
-    ctx->move_type = menu->selected_index;  // 0=Copy, 1=Cut
+    // menu->selected_index was set in menu_run()
+    ctx->move_type = menu->selected_index;  // 0 = Copy, 1 = Cut
     flow_next_step(flow);
 }
 
+// Step 2: read origin path from input string
 void handle_origin_path(Menu* menu, const char* input) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
     MoveContext* ctx = (MoveContext*)flow->data;
 
-    if (ctx->origin_path) free(ctx->origin_path);
+    if (ctx->origin_path) {
+        free(ctx->origin_path);
+    }
     ctx->origin_path = strdup(input);
     flow_next_step(flow);
 }
 
+// Step 3: read destination path from input string
 void handle_output_path(Menu* menu, const char* input) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
     MoveContext* ctx = (MoveContext*)flow->data;
 
-    if (ctx->output_path) free(ctx->output_path);
+    if (ctx->output_path) {
+        free(ctx->output_path);
+    }
     ctx->output_path = strdup(input);
     flow_next_step(flow);
 }
 
+// Step 4: user confirms the operation
 void handle_confirm(Menu* menu) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
     flow_complete(flow);
 }
 
+// Step 4 alternative: user cancels the operation
 void handle_cancel(Menu* menu) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
     flow_cancel(flow);
 }
 
-// Completion handlers
+// “Back” inside steps 2 or 3 should go to previous step in flow
+void handle_flow_back(Menu* menu) {
+    MenuFlow* flow = (MenuFlow*)menu->user_data;
+    flow_previous_step(flow);
+}
+
+//----------------------------------------------------------------
+// Completion handlers:
+
 void move_complete(MenuFlow* flow) {
     MoveContext* ctx = (MoveContext*)flow->data;
     printf("\nOperation completed:\n");
-    printf("Type: %s\n", ctx->move_type ? "Cut" : "Copy");
+    printf("Type: %s\n", (ctx->move_type ? "Cut" : "Copy"));
     printf("Origin: %s\n", ctx->origin_path);
     printf("Destination: %s\n", ctx->output_path);
 
@@ -81,7 +108,6 @@ void move_cancel(MenuFlow* flow) {
     MoveContext* ctx = (MoveContext*)flow->data;
     printf("\nOperation cancelled\n");
 
-    // Cleanup
     if (ctx->origin_path) free(ctx->origin_path);
     if (ctx->output_path) free(ctx->output_path);
     free(ctx);
@@ -91,62 +117,70 @@ void move_cancel(MenuFlow* flow) {
     getchar();
 }
 
+//----------------------------------------------------------------
+// Build the “Move File” flow and attach to parent menu:
 void setup_move_flow(Menu* parent_menu) {
-    // Create context
+    // Allocate the context object for the flow
     MoveContext* ctx = malloc(sizeof(MoveContext));
     ctx->move_type = -1;
     ctx->origin_path = NULL;
     ctx->output_path = NULL;
 
-    // Create flow
+    // Create the flow
     MenuFlow* flow = flow_create("Move File", move_complete, move_cancel);
     flow->data = ctx;
 
-    // Create steps
+    // Step 1: Select “Copy” or “Cut”
     Menu* step1 = menu_create("Select Move Type", NULL);
     menu_add_item(step1, "Copy", handle_move_type);
     menu_add_item(step1, "Cut", handle_move_type);
-    menu_add_item(step1, "Back", back_callback);
+    // If user presses Back on step1, cancel the entire flow:
+    menu_add_item(step1, "Back", handle_cancel);
 
+    // Step 2: Get origin path
     Menu* step2 = menu_create("Enter Origin Path", NULL);
     menu_add_input(step2, "Path: ", handle_origin_path);
-    menu_add_item(step2, "Back", back_callback);
+    // Back goes to step1
+    menu_add_item(step2, "Back", handle_flow_back);
 
+    // Step 3: Get destination path
     Menu* step3 = menu_create("Enter Output Path", NULL);
     menu_add_input(step3, "Path: ", handle_output_path);
-    menu_add_item(step3, "Back", back_callback);
+    // Back goes to step2
+    menu_add_item(step3, "Back", handle_flow_back);
 
-    Menu* step4 = menu_create("Confirm", NULL);
-    menu_add_item(step4, "Confirm Operation", handle_confirm);
+    // Step 4: Confirm vs Cancel
+    Menu* step4 = menu_create("Confirm Operation", NULL);
+    menu_add_item(step4, "Confirm", handle_confirm);
     menu_add_item(step4, "Cancel", handle_cancel);
 
-    // Add steps to flow
+    // Link steps into the flow (order matters)
     flow_add_step(flow, step1);
     flow_add_step(flow, step2);
     flow_add_step(flow, step3);
     flow_add_step(flow, step4);
 
-    // Add flow to parent menu
+    // Finally, put the flow entry into the parent (“Main”) menu
     menu_add_flow(parent_menu, "Move File", flow);
 }
 
 int main() {
     Menu* main_menu = menu_create("Main Menu", NULL);
 
-    // Add regular items
+    // Regular menu items can be anything—here we just stub them out
     menu_add_item(main_menu, "Option 1", NULL);
     menu_add_item(main_menu, "Option 2", NULL);
 
-    // Add the move file flow
+    // Attach “Move File” flow into the main menu
     setup_move_flow(main_menu);
 
-    // Add quit option
+    // A “Quit” item on the main menu
     menu_add_item(main_menu, "Quit", quit_callback);
 
-    // Run menu system
+    // Run the top‐level menu loop
     menu_run(main_menu);
 
-    // Cleanup
+    // Clean up everything
     menu_free(main_menu);
     return 0;
 }

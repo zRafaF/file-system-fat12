@@ -28,6 +28,8 @@ Menu* menu_create(const char* title, Menu* parent) {
     menu->parent = parent;
     menu->items = NULL;
     menu->should_quit = 0;
+    menu->user_data = NULL;
+    menu->selected_index = 0;
     return menu;
 }
 
@@ -35,15 +37,18 @@ void menu_add_item(Menu* menu, const char* title, MenuCallback callback) {
     MenuItem item = {
         .title = strdup(title),
         .type = MENU_ITEM_REGULAR,
-        .callback = callback};
+        .callback = callback,
+        .selected = 0};
     arrput(menu->items, item);
 }
 
 void menu_add_submenu(Menu* menu, const char* title, Menu* submenu) {
+    submenu->parent = menu;
     MenuItem item = {
         .title = strdup(title),
         .type = MENU_ITEM_SUBMENU,
-        .submenu = submenu};
+        .submenu = submenu,
+        .selected = 0};
     arrput(menu->items, item);
 }
 
@@ -51,7 +56,8 @@ void menu_add_input(Menu* menu, const char* title, InputCallback input_callback)
     MenuItem item = {
         .title = strdup(title),
         .type = MENU_ITEM_INPUT,
-        .input_callback = input_callback};
+        .input_callback = input_callback,
+        .selected = 0};
     arrput(menu->items, item);
 }
 
@@ -157,7 +163,7 @@ static void print_menu(Menu* menu, int selected) {
         }
     }
     printf("\nUse as setas para navegar e Enter para selecionar.");
-    fflush(stdout);  // Ensure output is flushed immediately
+    fflush(stdout);
 }
 
 char* menu_get_input(const char* prompt, int visible) {
@@ -221,7 +227,7 @@ void menu_add_flow(Menu* menu, const char* title, MenuFlow* flow) {
     arrput(menu->items, item);
 }
 
-// [Other existing functions remain the same until flow functions]
+// [Flow‐related functions unchanged except any minor housekeeping]
 
 MenuFlow* flow_create(const char* title,
                       FlowStepCallback on_complete,
@@ -250,7 +256,6 @@ void flow_start(MenuFlow* flow) {
 
 void flow_free(MenuFlow* flow) {
     free(flow->title);
-    // Note: The menus themselves should be freed separately
     arrfree(flow->steps);
     free(flow);
 }
@@ -285,7 +290,7 @@ void flow_cancel(MenuFlow* flow) {
     }
 }
 
-// Updated menu_run to handle flow items
+// Updated menu_run to handle flow items and propagate selection
 void menu_run(Menu* menu) {
     if (arrlen(menu->items) == 0) return;
 
@@ -296,52 +301,76 @@ void menu_run(Menu* menu) {
         print_menu(menu, selected);
         int key = read_key();
 
-        if (key == 'A') {  // Up
+        if (key == 'A') {  // Up arrow
             selected = (selected > 0) ? selected - 1 : arrlen(menu->items) - 1;
-        } else if (key == 'B') {  // Down
+        } else if (key == 'B') {  // Down arrow
             selected = (selected < arrlen(menu->items) - 1) ? selected + 1 : 0;
         } else if (key == '\r' || key == '\n') {  // Enter
             MenuItem* item = &menu->items[selected];
+            menu->selected_index = selected;
 
             switch (item->type) {
-                case MENU_ITEM_REGULAR:
+                case MENU_ITEM_REGULAR: {
                     clear_screen();
-                    item->callback(menu);
+                    if (item->callback) {
+                        item->callback(menu);
+                    }
+                    // If inside a flow step (user_data != NULL), exit this menu_run so the flow can advance.
+                    if (menu->user_data) {
+                        menu->should_quit = 1;
+                        break;
+                    }
+                    // Otherwise, stay in this menu and wait for a keypress
                     if (!menu->should_quit) {
                         printf("\n\nPress any key to continue...");
                         fflush(stdout);
                         read_key();
                     }
                     break;
+                }
 
-                case MENU_ITEM_SUBMENU:
+                case MENU_ITEM_SUBMENU: {
                     clear_screen();
                     menu_run(item->submenu);
+                    // After returning from the submenu, reset quit and selection
                     menu->should_quit = 0;
                     selected = 0;
                     break;
+                }
 
-                case MENU_ITEM_INPUT:
+                case MENU_ITEM_INPUT: {
                     clear_screen();
-                    char* input = menu_get_input("Enter text: ", 1);
-                    item->input_callback(menu, input);
+                    char* input = menu_get_input(item->title, 1);
+                    if (item->input_callback) {
+                        item->input_callback(menu, input);
+                    }
                     free(input);
+                    // If inside a flow step, exit so next step runs
+                    if (menu->user_data) {
+                        menu->should_quit = 1;
+                        break;
+                    }
                     if (!menu->should_quit) {
                         printf("\nPress any key to continue...");
                         fflush(stdout);
                         read_key();
                     }
                     break;
+                }
 
-                case MENU_ITEM_FLOW:
+                case MENU_ITEM_FLOW: {
                     clear_screen();
+                    // item->flow is the MenuFlow*
                     flow_start(item->flow);
+                    // Ensure we reset quit and selection so main menu redraws
                     menu->should_quit = 0;
                     selected = 0;
                     break;
+                }
             }
         }
     }
 
+    // Reset should_quit so that if parent wants to keep running, it can
     menu->should_quit = 0;
 }
