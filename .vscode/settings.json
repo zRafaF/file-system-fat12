@@ -33,7 +33,8 @@
         "buffer_operation.h": "c",
         "fat12.h": "c",
         "stb_ds.h": "c",
-        "ctype.h": "c"
+        "ctype.h": "c",
+        "stddef.h": "c"
     },
     "makefile.configureOnOpen": true
 }

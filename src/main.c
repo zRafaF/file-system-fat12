@@ -129,6 +129,12 @@ void move_cancel(MenuFlow* flow) {
     getchar();
 }
 
+void handle_option(Menu* menu) {
+    // This function is a placeholder for handling other menu options.
+    // It can be expanded to handle specific actions for other menu items.
+    printf("Option selected: %s\n", menu->items[menu->selected_index].title);
+}
+
 //----------------------------------------------------------------
 // Build the “Move File” flow and attach it (once) to the main menu:
 void setup_move_flow(Menu* parent_menu) {
@@ -180,7 +186,7 @@ int main() {
     Menu* main_menu = menu_create("Main Menu", NULL);
 
     // Two dummy options
-    menu_add_item(main_menu, "Option 1", NULL);
+    menu_add_item(main_menu, "Option 1", handle_option);
     menu_add_item(main_menu, "Option 2", NULL);
 
     // Attach “Move File” flow into the main menu (only once)
