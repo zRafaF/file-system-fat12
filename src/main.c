@@ -3,7 +3,7 @@
 #include "app.h"
 #include "cli_menu.h"
 #include "menu.h"
-#include "stb_ds.h"
+#include "stb_ds.h"  // Precisa ser incluido
 
 int main(void) {
     Menu* unmounted_menu = menu_create("MENU PRINCIPAL", NULL);

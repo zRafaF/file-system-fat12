@@ -109,7 +109,8 @@ static void setup_copy_flow(Menu* parent_menu) {
 
 void init_menus(Menu* unmounted_menu, Menu* mounted_menu) {
     // Unmounted menu setup
-    menu_add_item(unmounted_menu, "Montar Imagem", app_mount_callback);
+    menu_add_item(unmounted_menu, "Montar \"fat12.img\"", app_mount_callback);
+    menu_add_item(unmounted_menu, "Montar \"fat12subdir.img\"", app_mount_callback);
     menu_add_item(unmounted_menu, "Sair", quit_callback);
 
     // Mounted menu setup

@@ -8,24 +8,33 @@ void app_mount_callback(Menu *m) {
     if (is_mounted) {
         printf("Imagem ja esta montada.\n");
     } else {
+        switch (m->selected_index) {
+            case 0:
+                printf("Montando \"fat12.img\"...\n");
+                break;
+            case 1:
+                printf("Montando \"fat12subdir.img\"...\n");
+                break;
+            default:
+                printf("Montando fat12.img...\n");
+                break;
+        }
         is_mounted = true;
         printf("Imagem montada com sucesso.\n");
     }
     menu_wait_for_any_key();
-    // Permite que o menu seja trocado para o menu de operações do disco
-    menu_back(m);
+    menu_back(m);  // Permite que o menu seja trocado
 }
 
 void app_unmount_callback(Menu *m) {
     if (!is_mounted) {
         printf("Nenhuma imagem montada.\n");
     } else {
-        // Aqui você chamaria sua rotina real de desmontagem...
         is_mounted = false;
         printf("Imagem desmontada com sucesso.\n");
     }
     menu_wait_for_any_key();
-    menu_back(m);
+    menu_back(m);  // Permite que o menu seja trocado
 }
 
 void app_ls1_callback(Menu *m) {
