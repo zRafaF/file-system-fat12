@@ -58,6 +58,7 @@ void menu_free(Menu* menu);
 void menu_back(Menu* menu);
 void menu_quit(Menu* menu);
 char* menu_get_input(const char* prompt, int visible);
+void menu_wait_for_any_key(void);
 
 // Flow functions
 MenuFlow* flow_create(const char* title,

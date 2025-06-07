@@ -218,6 +218,12 @@ char* menu_get_input(const char* prompt, int visible) {
     return input;
 }
 
+void menu_wait_for_any_key(void) {
+    printf("\nPressione qualquer tecla para continuar...");
+    fflush(stdout);
+    read_key();
+}
+
 void menu_add_flow(Menu* menu, const char* title, MenuFlow* flow) {
     MenuItem item = {
         .title = strdup(title),
@@ -323,9 +329,7 @@ void menu_run(Menu* menu) {
                     }
                     // Otherwise, wait for any key before redrawing
                     if (!menu->should_quit) {
-                        printf("\n\nPress any key to continue...");
-                        fflush(stdout);
-                        read_key();
+                        menu_wait_for_any_key();
                     }
                     break;
                 }
@@ -352,9 +356,7 @@ void menu_run(Menu* menu) {
                         break;
                     }
                     if (!menu->should_quit) {
-                        printf("\nPress any key to continue...");
-                        fflush(stdout);
-                        read_key();
+                        menu_wait_for_any_key();
                     }
                     break;
                 }

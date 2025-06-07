@@ -35,7 +35,8 @@
         "stb_ds.h": "c",
         "ctype.h": "c",
         "stddef.h": "c",
-        "cli_menu.h": "c"
+        "cli_menu.h": "c",
+        "app.h": "c"
     },
     "makefile.configureOnOpen": true,
     "cSpell.words": ["diretorio", "diretorios", "Operacao"]
