@@ -64,14 +64,19 @@ void app_ls1_callback(Menu *m) {
 
     fs_directory_t root_dir = fs_read_root_directory(disk);
 
-    printf("\n===== LISTANDO ARQUIVOS E DIRETORIOS =====\n\n");
+    printf("\n===== LISTANDO ARQUIVOS E DIRETORIOS =====\n");
+    printf("------------------------------------------\n");
 
     fs_print_ls_directory_header();
+
+    printf("----------------------------------------------------------------------------------------------\n");
 
     for (int i = 0; i < arrlen(root_dir.subdirs); i++) {
         fat12_file_subdir_s subdir = root_dir.subdirs[i];
         fs_print_file_leaf(subdir, 0);
     }
+
+    printf("----------------------------------------------------------------------------------------------\n");
 
     for (int i = 0; i < arrlen(root_dir.files); i++) {
         fat12_file_subdir_s file = root_dir.files[i];
@@ -80,6 +85,7 @@ void app_ls1_callback(Menu *m) {
 
     fs_free_directory(root_dir);
 }
+
 void app_ls_callback(Menu *m) {
     UNUSED(m);
 

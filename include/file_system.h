@@ -2,8 +2,10 @@
 #define FILE_SYSTEM_H
 
 #include <stdio.h>
+#include <string.h>
 
 #include "fat12.h"
+#include "fat12_helpers.h"
 
 typedef struct {
     fat12_file_subdir_s *files;    // Array of files in the directory
