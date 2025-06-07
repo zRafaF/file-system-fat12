@@ -141,6 +141,9 @@ uint8_t *fat12_load_full_fat_table(FILE *disk) {
         return NULL;
     }
 
+    // Clear the FAT table buffer
+    memset(fat_table, 0, sizeof(fat_table));
+
     // Read the FAT table into the buffer
     size_t bytes_read = fread(fat_table, sizeof(uint8_t), SECTOR_SIZE * 9, disk);
     if (bytes_read != SECTOR_SIZE * FAT12_NUM_OF_FAT_TABLES_SECTORS) {

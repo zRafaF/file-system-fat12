@@ -15,6 +15,7 @@ void app_mount_callback(Menu *m) {
                     perror("Failed to open disk image");
                     exit(EXIT_FAILURE);
                 }
+                fat12_load_full_fat_table(disk);
                 printf("Imagem montada com sucesso.\n");
                 break;
             case 1:
@@ -23,6 +24,7 @@ void app_mount_callback(Menu *m) {
                     perror("Failed to open disk image");
                     exit(EXIT_FAILURE);
                 }
+                fat12_load_full_fat_table(disk);
                 printf("Imagem montada com sucesso.\n");
                 break;
             default:
