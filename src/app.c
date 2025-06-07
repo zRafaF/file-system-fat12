@@ -1,25 +1,32 @@
 #include "app.h"
 
-static bool is_mounted = false;
+static FILE *disk = NULL;
 
-bool app_is_mounted(void) { return is_mounted; }
+bool app_is_mounted(void) { return disk != NULL; }
 
 void app_mount_callback(Menu *m) {
-    if (is_mounted) {
+    if (disk != NULL) {
         printf("Imagem ja esta montada.\n");
     } else {
         switch (m->selected_index) {
             case 0:
-                printf("Montando \"fat12.img\"...\n");
+                disk = fopen(PATH_FAT12_IMG, "rb");
+                if (disk == NULL) {
+                    perror("Failed to open disk image");
+                    exit(EXIT_FAILURE);
+                }
                 break;
             case 1:
-                printf("Montando \"fat12subdir.img\"...\n");
+                disk = fopen(PATH_FAT12SUBDIR_IMG, "rb");
+                if (disk == NULL) {
+                    perror("Failed to open disk image");
+                    exit(EXIT_FAILURE);
+                }
                 break;
             default:
                 printf("Montando fat12.img...\n");
                 break;
         }
-        is_mounted = true;
         printf("Imagem montada com sucesso.\n");
     }
     menu_wait_for_any_key();
@@ -27,14 +34,24 @@ void app_mount_callback(Menu *m) {
 }
 
 void app_unmount_callback(Menu *m) {
-    if (!is_mounted) {
+    if (!app_is_mounted()) {
         printf("Nenhuma imagem montada.\n");
     } else {
-        is_mounted = false;
+        fclose(disk);
+        disk = NULL;  // Desmonta a imagem
         printf("Imagem desmontada com sucesso.\n");
     }
     menu_wait_for_any_key();
     menu_back(m);  // Permite que o menu seja trocado
+}
+
+void app_boot_sector_callback(Menu *m) {
+    UNUSED(m);
+    if (!app_is_mounted()) {
+        printf("Nenhuma imagem montada.\n");
+    } else {
+        fat12_print_boot_sector_info(fat12_read_boot_sector(disk));
+    }
 }
 
 void app_ls1_callback(Menu *m) {

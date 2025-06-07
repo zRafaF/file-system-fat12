@@ -66,7 +66,8 @@ fat12_directory_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx) {
 }
 
 void fat12_print_boot_sector_info(fat12_boot_sector_s bs) {
-    printf("Boot Sector Information:\n");
+    printf("\n===== BOOT SECTOR INFO =====\n\n");
+
     printf("Sector Size: %u bytes\n", bs.sector_size);
     printf("Sectors per Cluster: %u\n", bs.sectors_per_cluster);
     printf("Number of Reserved Sectors: %u\n", bs.num_of_reserved_sectors);
@@ -84,7 +85,8 @@ void fat12_print_boot_sector_info(fat12_boot_sector_s bs) {
 }
 
 void fat12_print_directory_info(fat12_directory_s dir) {
-    printf("Directory Entry Information:\n");
+    printf("\n===== DIR ENTRY INFO =====\n\n");
+
     printf("Filename: %.8s\n", dir.filename);
     printf("Extension: %.3s\n", dir.extension);
     printf("Attributes: 0x%02X\n", dir.attributes);
