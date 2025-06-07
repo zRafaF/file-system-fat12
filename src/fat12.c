@@ -4,7 +4,7 @@ static bool has_loaded_fat_table = false;
 
 static uint8_t fat_table[SECTOR_SIZE * 9];  // FAT12 can have up to 9 sectors for the FAT table
 
-static inline fat12_time_s fat12_extract_time(uint16_t time) {
+fat12_time_s fat12_extract_time(uint16_t time) {
     // Extraído de https://fileadmin.cs.lth.se/cs/Education/EDA385/HT09/student_doc/FinalReports/FAT12_overview.pdf
 
     fat12_time_s t;
@@ -14,7 +14,7 @@ static inline fat12_time_s fat12_extract_time(uint16_t time) {
     return t;
 }
 
-static inline fat12_date_s fat12_extract_date(uint16_t date) {
+fat12_date_s fat12_extract_date(uint16_t date) {
     // Extraído de https://fileadmin.cs.lth.se/cs/Education/EDA385/HT09/student_doc/FinalReports/FAT12_overview.pdf
 
     fat12_date_s d;
@@ -39,30 +39,56 @@ fat12_boot_sector_s fat12_read_boot_sector(FILE *disk) {
     return boot_sector;
 }
 
-fat12_directory_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx) {
+fat12_file_subdir_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx) {
     assert(disk != NULL);
     assert(entry_idx < (FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS * FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR));
 
-    fat12_directory_s dir_entry;
+    fat12_file_subdir_s dir_entry;
 
     // Calculate the sector where the directory entry is located
     uint16_t sector_idx = FAT12_ROOT_DIRECTORY_START + (entry_idx / FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR);
     uint16_t entry_offset = entry_idx % FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR;
 
     // Move to the position of the directory entry
-    if (fseek(disk, sector_idx * SECTOR_SIZE + entry_offset * sizeof(fat12_directory_s), SEEK_SET) != 0) {
+    if (fseek(disk, sector_idx * SECTOR_SIZE + entry_offset * sizeof(fat12_file_subdir_s), SEEK_SET) != 0) {
         perror("Failed to seek to directory entry position");
         exit(EXIT_FAILURE);
     }
 
     // Read the directory entry into the structure
-    size_t bytes_read = fread(&dir_entry, sizeof(fat12_directory_s), 1, disk);
+    size_t bytes_read = fread(&dir_entry, sizeof(fat12_file_subdir_s), 1, disk);
     if (bytes_read != 1) {
         perror("Failed to read directory entry");
         exit(EXIT_FAILURE);
     }
 
     return dir_entry;
+}
+char *fat12_attribute_to_string(uint8_t attribute) {
+    switch (attribute) {
+        case FAT12_ATTR_NONE:
+            return "None";
+        case FAT12_ATTR_READ_ONLY:
+            return "Read Only";
+        case FAT12_ATTR_HIDDEN:
+            return "Hidden";
+        case FAT12_ATTR_SYSTEM:
+            return "System";
+        case FAT12_ATTR_VOLUME_LABEL:
+            return "Volume Label";
+        case FAT12_ATTR_DIRECTORY:
+            return "Directory";
+        case FAT12_ATTR_ARCHIVE:
+            return "Archive";
+        case FAT12_ATTR_UNUSED1:
+            return "Unused1";
+        case FAT12_ATTR_UNUSED2:
+            return "Unused2";
+        case FAT12_ATTR_LONG_NAME:
+            return "Long Name";
+        default:
+            return "Unknown";
+    }
 }
 
 void fat12_print_boot_sector_info(fat12_boot_sector_s bs) {
@@ -84,12 +110,14 @@ void fat12_print_boot_sector_info(fat12_boot_sector_s bs) {
     printf("File System Type: %.8s\n", bs.type_of_file_system);
 }
 
-void fat12_print_directory_info(fat12_directory_s dir) {
+void fat12_print_directory_info(fat12_file_subdir_s dir) {
     printf("\n===== DIR ENTRY INFO =====\n\n");
 
     printf("Filename: %.8s\n", dir.filename);
     printf("Extension: %.3s\n", dir.extension);
-    printf("Attributes: 0x%02X\n", dir.attributes);
+
+    printf("Attributes: (0x%02X) %s\n", dir.attributes, fat12_attribute_to_string(dir.attributes));
+
     fat12_time_s creation_time = fat12_extract_time(dir.creation_time);
     fat12_date_s creation_date = fat12_extract_date(dir.creation_date);
 

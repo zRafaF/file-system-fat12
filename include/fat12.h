@@ -13,9 +13,10 @@
 #define FAT12_FAT_TABLES_START 1           // FAT12 starts at sector 1
 #define FAT12_NUM_OF_FAT_TABLES_SECTORS 9  // FAT12 can have up to 9 sectors for the FAT table
 
-#define FAT12_ROOT_DIRECTORY_START 19               // Root directory starts at cluster 19 for FAT12
-#define FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS 14      // FAT12 root directory can occupy up to 14 sectors
-#define FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR 16  // Maximum number of entries 512 / 32 = 16 entries per sector
+#define FAT12_ROOT_DIRECTORY_START 19                                                                              // Root directory starts at cluster 19 for FAT12
+#define FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS 14                                                                     // FAT12 root directory can occupy up to 14 sectors
+#define FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR 16                                                                 // Maximum number of entries 512 / 32 = 16 entries per sector
+#define FAT12_ROOT_DIRECTORY_ENTRIES FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR *FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS  // Total number of entries in the root directory
 
 // FAT12 entries code map
 #define FAT12_FREE (0x000)            // Free cluster marker
@@ -47,6 +48,19 @@ typedef struct __attribute__((__packed__)) {
     char type_of_file_system[8];
 } fat12_boot_sector_s;
 
+typedef enum {
+    FAT12_ATTR_NONE = 0x00,
+    FAT12_ATTR_READ_ONLY = 0x01,
+    FAT12_ATTR_HIDDEN = 0x02,
+    FAT12_ATTR_SYSTEM = 0x04,
+    FAT12_ATTR_VOLUME_LABEL = 0x08,
+    FAT12_ATTR_DIRECTORY = 0x10,
+    FAT12_ATTR_ARCHIVE = 0x20,
+    FAT12_ATTR_UNUSED1 = 0x40,
+    FAT12_ATTR_UNUSED2 = 0x80,
+    FAT12_ATTR_LONG_NAME = 0x0F,  // Long file name attribute (Can be ignored)
+} fat12_file_subdir_attributes_e;
+
 typedef struct __attribute__((__packed__)) {
     char filename[8];
     char extension[3];
@@ -55,12 +69,12 @@ typedef struct __attribute__((__packed__)) {
     uint16_t creation_time;     // Creation time
     uint16_t creation_date;     // Creation date
     uint16_t last_access_date;  // Last access date
-    uint16_t ignore_in_fat12;
-    uint16_t last_write_time;  // Last modification time
-    uint16_t last_write_date;  // Last modification date
-    uint16_t first_cluster;    // First cluster number
-    uint32_t file_size;        // File size in bytes
-} fat12_directory_s;
+    uint16_t ignore_in_fat12;   // Ignored in FAT12
+    uint16_t last_write_time;   // Last modification time
+    uint16_t last_write_date;   // Last modification date
+    uint16_t first_cluster;     // First cluster number
+    uint32_t file_size;         // File size in bytes
+} fat12_file_subdir_s;
 
 typedef struct {
     uint8_t seconds;
@@ -74,16 +88,21 @@ typedef struct {
     uint16_t year;
 } fat12_date_s;
 
+fat12_time_s fat12_extract_time(uint16_t time);
+fat12_date_s fat12_extract_date(uint16_t date);
+
 fat12_boot_sector_s fat12_read_boot_sector(FILE *disk);
-fat12_directory_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx);
+fat12_file_subdir_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx);
 
 void fat12_print_boot_sector_info(fat12_boot_sector_s bs);
-void fat12_print_directory_info(fat12_directory_s dir);
+void fat12_print_directory_info(fat12_file_subdir_s dir);
 
 uint8_t *fat12_read_cluster(FILE *disk, uint8_t *buffer, uint16_t cluster_number);
 
 uint8_t *fat12_load_full_fat_table(FILE *disk);
 
 uint16_t fat12_get_table_entry(uint16_t entry_idx);
+
+char *fat12_attribute_to_string(uint8_t attribute);
 
 #endif  // FAT12_H

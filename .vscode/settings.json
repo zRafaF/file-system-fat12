@@ -8,6 +8,7 @@
     },
     "editor.formatOnSave": true,
     "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google,  ColumnLimit: 0, IndentWidth: 4, TabWidth: 4}",
+    "C_Cpp.copilotHover": "disabled",
     "files.associations": {
         "*.ino": "arduino",
         "*.pl": "prolog",
@@ -36,7 +37,8 @@
         "ctype.h": "c",
         "stddef.h": "c",
         "cli_menu.h": "c",
-        "app.h": "c"
+        "app.h": "c",
+        "file_system.h": "c"
     },
     "makefile.configureOnOpen": true,
     "cSpell.words": [

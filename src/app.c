@@ -1,5 +1,7 @@
 #include "app.h"
 
+#include "stb_ds.h"
+
 static FILE *disk = NULL;
 
 bool app_is_mounted(void) { return disk != NULL; }
@@ -16,7 +18,7 @@ void app_mount_callback(Menu *m) {
                     exit(EXIT_FAILURE);
                 }
                 fat12_load_full_fat_table(disk);
-                printf("Imagem montada com sucesso.\n");
+                printf("Imagem montada com sucesso em \'/\'.\n");
                 break;
             case 1:
                 disk = fopen(PATH_FAT12SUBDIR_IMG, "rb");
@@ -25,7 +27,7 @@ void app_mount_callback(Menu *m) {
                     exit(EXIT_FAILURE);
                 }
                 fat12_load_full_fat_table(disk);
-                printf("Imagem montada com sucesso.\n");
+                printf("Imagem montada com sucesso em \'/\'.\n");
                 break;
             default:
                 printf("Opção inválida...\n");
@@ -59,10 +61,45 @@ void app_boot_sector_callback(Menu *m) {
 
 void app_ls1_callback(Menu *m) {
     UNUSED(m);
-    printf("Listando arquivos no diretorio raiz...\n");
+
+    fs_directory_t root_dir = fs_read_root_directory(disk);
+
+    printf("\n===== LISTANDO ARQUIVOS E DIRETORIOS =====\n\n");
+
+    fs_print_ls_directory_header();
+
+    for (int i = 0; i < arrlen(root_dir.subdirs); i++) {
+        fat12_file_subdir_s subdir = root_dir.subdirs[i];
+        fs_print_file_leaf(subdir, 0);
+    }
+
+    for (int i = 0; i < arrlen(root_dir.files); i++) {
+        fat12_file_subdir_s file = root_dir.files[i];
+        fs_print_file_leaf(file, 0);
+    }
+
+    fs_free_directory(root_dir);
 }
 void app_ls_callback(Menu *m) {
     UNUSED(m);
+
+    fat12_file_subdir_s *dir_entries = NULL;
+
+    for (uint8_t i = 0; i < 12; i++) {
+        fat12_file_subdir_s dir_entry = fat12_read_directory_entry(disk, i);
+
+        if (dir_entry.filename[0] != 0x00) {
+            arrpush(dir_entries, dir_entry);
+        }
+    }
+
+    for (int i = 0; i < arrlen(dir_entries); i++) {
+        fat12_file_subdir_s dir_entry = dir_entries[i];
+        fat12_print_directory_info(dir_entry);
+    }
+
+    arrfree(dir_entries);
+
     printf("Listando todos os arquivos e diretorios...\n");
 }
 void app_rm_callback(Menu *m) {

@@ -8,6 +8,7 @@
 #include "cli_menu.h"
 #include "defines.h"
 #include "fat12.h"
+#include "file_system.h"
 
 // Returns true if a disk image is currently mounted
 bool app_is_mounted(void);

@@ -1,2 +1,4 @@
 /build/
 file_system*
+
+!*/file_system*
