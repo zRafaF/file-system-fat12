@@ -13,220 +13,214 @@
 #include "fat12.h"
 #include "stb_ds.h"
 
-typedef struct {
-    int move_type;  // 0 = Copy, 1 = Cut
-    char* origin_path;
-    char* output_path;
-} MoveContext;
+// ----------------------------------------------------------------
+// Globals to track state
 
-//----------------------------------------------------------------
-// Callbacks for “Back” and “Quit” in non‐flow menus:
+static bool is_mounted = false;
+static bool exit_program = false;
+
+// ----------------------------------------------------------------
+// “Back” helper: returns from the current menu_run()
+
 void back_callback(Menu* menu) {
     menu_back(menu);
 }
 
+// ----------------------------------------------------------------
+// Quit helper: marks for exit and returns from the current menu_run()
+
 void quit_callback(Menu* menu) {
-    menu_quit(menu);
+    exit_program = true;
+    menu_back(menu);
 }
 
-//----------------------------------------------------------------
-// Flow‐step callbacks:
+// ----------------------------------------------------------------
+// Mount / Unmount callbacks
 
-// Step 1: user picks “Copy” (index=0) or “Cut” (index=1)
+void mount_callback(Menu* menu) {
+    if (is_mounted) {
+        printf("Imagem já está montada.\n");
+    } else {
+        // Aqui você chamaria sua rotina real de montagem...
+        is_mounted = true;
+        printf("Imagem montada com sucesso.\n");
+    }
+    printf("\nPressione qualquer tecla para continuar...");
+    getchar();
+    menu_back(menu);
+}
+
+void unmount_callback(Menu* menu) {
+    if (!is_mounted) {
+        printf("Nenhuma imagem montada.\n");
+    } else {
+        // Aqui você chamaria sua rotina real de desmontagem...
+        is_mounted = false;
+        printf("Imagem desmontada com sucesso.\n");
+    }
+    printf("\nPressione qualquer tecla para continuar...");
+    getchar();
+    menu_back(menu);
+}
+
+// ----------------------------------------------------------------
+// Your existing “Copy File” flow setup
+// (unchanged from o seu código original)
+
+typedef struct {
+    int copy_type;  // 0 = Disco -> Sistema, 1 = Sistema -> Disco
+    char* origin_path;
+    char* output_path;
+} CopyContext;
+
 void handle_move_type(Menu* menu) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
-    MoveContext* ctx = (MoveContext*)flow->data;
-
-    // menu->selected_index was set by menu_run()
-    ctx->move_type = menu->selected_index;  // 0 = Copy, 1 = Cut
+    CopyContext* ctx = (CopyContext*)flow->data;
+    ctx->copy_type = menu->selected_index;
     flow_next_step(flow);
 }
 
-// Step 2: read origin path from input string
 void handle_origin_path(Menu* menu, const char* input) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
-    MoveContext* ctx = (MoveContext*)flow->data;
-
-    if (ctx->origin_path) {
-        free(ctx->origin_path);
-    }
+    CopyContext* ctx = (CopyContext*)flow->data;
+    free(ctx->origin_path);
     ctx->origin_path = strdup(input);
     flow_next_step(flow);
 }
 
-// Step 3: read destination path from input string
 void handle_output_path(Menu* menu, const char* input) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
-    MoveContext* ctx = (MoveContext*)flow->data;
-
-    if (ctx->output_path) {
-        free(ctx->output_path);
-    }
+    CopyContext* ctx = (CopyContext*)flow->data;
+    free(ctx->output_path);
     ctx->output_path = strdup(input);
     flow_next_step(flow);
 }
 
-// Step 4: user confirms the operation
 void handle_confirm(Menu* menu) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
     flow_complete(flow);
 }
 
-// Step 4 alternative: user cancels the operation
 void handle_cancel(Menu* menu) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
     flow_cancel(flow);
 }
 
-// “Back” inside steps 2 or 3 should go to the previous step in the flow
 void handle_flow_back(Menu* menu) {
     MenuFlow* flow = (MenuFlow*)menu->user_data;
     flow_previous_step(flow);
 }
 
-//----------------------------------------------------------------
-// Completion handlers (moved‐or‐cut flow):
-
-void move_complete(MenuFlow* flow) {
-    MoveContext* ctx = (MoveContext*)flow->data;
-    printf("\nOperation completed:\n");
-    printf("  Type: %s\n", (ctx->move_type ? "Cut" : "Copy"));
-    printf("  Origin: %s\n", ctx->origin_path);
-    printf("  Destination: %s\n", ctx->output_path);
-
-    // Instead of freeing the flow or context, we only free the two strings
-    // and reset the MoveContext fields. That way, the same flow object can
-    // be re‐used if the user picks “Move File” again.
-    if (ctx->origin_path) {
-        free(ctx->origin_path);
-        ctx->origin_path = NULL;
-    }
-    if (ctx->output_path) {
-        free(ctx->output_path);
-        ctx->output_path = NULL;
-    }
-    ctx->move_type = -1;
-
-    printf("\nPress any key to continue...");
-    getchar();
+void copy_complete(MenuFlow* flow) {
+    CopyContext* ctx = (CopyContext*)flow->data;
+    printf("\nOperação completa:\n");
+    printf("  Tipo: %s\n", (ctx->copy_type ? "Disco -> Sistema" : "Sistema -> Disco"));
+    printf("  Origem: %s\n", ctx->origin_path);
+    printf("  Destino: %s\n", ctx->output_path);
+    free(ctx->origin_path);
+    free(ctx->output_path);
+    ctx->origin_path = ctx->output_path = NULL;
+    ctx->copy_type = -1;
 }
 
-void move_cancel(MenuFlow* flow) {
-    MoveContext* ctx = (MoveContext*)flow->data;
-    printf("\nOperation cancelled\n");
-
-    if (ctx->origin_path) {
-        free(ctx->origin_path);
-        ctx->origin_path = NULL;
-    }
-    if (ctx->output_path) {
-        free(ctx->output_path);
-        ctx->output_path = NULL;
-    }
-    ctx->move_type = -1;
-
-    printf("\nPress any key to continue...");
-    getchar();
+void copy_cancel(MenuFlow* flow) {
+    CopyContext* ctx = (CopyContext*)flow->data;
+    printf("\nOperação cancelada.\n");
+    free(ctx->origin_path);
+    free(ctx->output_path);
+    ctx->origin_path = ctx->output_path = NULL;
+    ctx->copy_type = -1;
 }
 
 void handle_option(Menu* menu) {
-    // This function is a placeholder for handling other menu options.
-    // It can be expanded to handle specific actions for other menu items.
     printf("Option selected: %s\n", menu->items[menu->selected_index].title);
 }
 
-//----------------------------------------------------------------
-// Build the “Move File” flow and attach it (once) to the main menu:
-void setup_move_flow(Menu* parent_menu) {
-    // Allocate a single MoveContext that we will re‐use each time the flow runs.
-    MoveContext* ctx = malloc(sizeof(MoveContext));
-    ctx->move_type = -1;
-    ctx->origin_path = NULL;
-    ctx->output_path = NULL;
+void setup_copy_flow(Menu* parent_menu) {
+    CopyContext* ctx = malloc(sizeof(CopyContext));
+    ctx->copy_type = -1;
+    ctx->origin_path = ctx->output_path = NULL;
 
-    // Create the flow (only once)
-    MenuFlow* flow = flow_create("Move File", move_complete, move_cancel);
+    MenuFlow* flow = flow_create("Copiar Arquivo", copy_complete, copy_cancel);
     flow->data = ctx;
 
-    // Step 1: Select “Copy” or “Cut”
-    Menu* step1 = menu_create("Select Move Type", NULL);
-    menu_add_item(step1, "Copy", handle_move_type);
-    menu_add_item(step1, "Cut", handle_move_type);
-    // If user presses Back on step 1, cancel the flow
-    menu_add_item(step1, "Back", handle_cancel);
+    // Step 1
+    Menu* step1 = menu_create("Selecione o tipo de operação", NULL);
+    menu_add_item(step1, "Disco -> Sistema", handle_move_type);
+    menu_add_item(step1, "Sistema -> Disco", handle_move_type);
+    menu_add_item(step1, "Voltar", handle_cancel);
 
-    // Step 2: Get origin path
-    Menu* step2 = menu_create("Enter Origin Path", NULL);
-    menu_add_input(step2, "Path: ", handle_origin_path);
-    // Back goes to step 1
-    menu_add_item(step2, "Back", handle_flow_back);
+    // Step 2
+    Menu* step2 = menu_create("Insira o caminho de origem", NULL);
+    menu_add_input(step2, "Caminho: ", handle_origin_path);
+    menu_add_item(step2, "Voltar", handle_flow_back);
 
-    // Step 3: Get destination path
-    Menu* step3 = menu_create("Enter Output Path", NULL);
-    menu_add_input(step3, "Path: ", handle_output_path);
-    // Back goes to step 2
-    menu_add_item(step3, "Back", handle_flow_back);
+    // Step 3
+    Menu* step3 = menu_create("Insira o caminho de destino", NULL);
+    menu_add_input(step3, "Caminho: ", handle_output_path);
+    menu_add_item(step3, "Voltar", handle_flow_back);
 
-    // Step 4: Confirm vs Cancel
-    Menu* step4 = menu_create("Confirm Operation", NULL);
-    menu_add_item(step4, "Confirm", handle_confirm);
-    menu_add_item(step4, "Cancel", handle_cancel);
+    // Step 4
+    Menu* step4 = menu_create("Deseja continuar?", NULL);
+    menu_add_item(step4, "Confirmar", handle_confirm);
+    menu_add_item(step4, "Cancelar", handle_cancel);
 
-    // Link steps into the flow in order
     flow_add_step(flow, step1);
     flow_add_step(flow, step2);
     flow_add_step(flow, step3);
     flow_add_step(flow, step4);
 
-    // Finally, put the flow entry into the parent (“Main”) menu
-    menu_add_flow(parent_menu, "Move File", flow);
+    menu_add_flow(parent_menu, "Copiar Arquivo", flow);
 }
 
-int main() {
-    Menu* main_menu = menu_create("Main Menu", NULL);
+// ----------------------------------------------------------------
+// main()
 
-    // Two dummy options
-    menu_add_item(main_menu, "Option 1", handle_option);
-    menu_add_item(main_menu, "Option 2", NULL);
+int main(void) {
+    // Pre‐build both menus:
 
-    // Attach “Move File” flow into the main menu (only once)
-    setup_move_flow(main_menu);
+    // 1) Menu de “não montado”
+    Menu* unmounted_menu = menu_create("MENU PRINCIPAL", NULL);
+    menu_add_item(unmounted_menu, "Montar Imagem", mount_callback);
+    menu_add_item(unmounted_menu, "Quit", quit_callback);
 
-    // A “Quit” item on the main menu
-    menu_add_item(main_menu, "Quit", quit_callback);
+    // 2) Menu de “já montado”
+    Menu* mounted_menu = menu_create("DISK OPERATIONS", NULL);
+    menu_add_item(mounted_menu, "ls-1 (Listar diretório raiz)", handle_option);
+    menu_add_item(mounted_menu, "ls   (Listar todos arquivos e diretórios)", handle_option);
+    setup_copy_flow(mounted_menu);
+    menu_add_item(mounted_menu, "rm   (Remover arquivo ou diretório)", handle_option);
+    menu_add_item(mounted_menu, "Desmontar Imagem", unmount_callback);
+    menu_add_item(mounted_menu, "Quit", quit_callback);
 
-    // Run the top‐level menu loop
-    menu_run(main_menu);
+    // Loop, alternando entre os dois menus até o usuário escolher “Quit”
+    while (!exit_program) {
+        printf("\n%s\n", is_mounted ? "DISK OPERATIONS" : "MENU PRINCIPAL");
+        if (!is_mounted) {
+            menu_run(unmounted_menu);
+        } else {
+            menu_run(mounted_menu);
+        }
+    }
 
-    // ── Cleanup on exit ──
-    // We only allocated one MoveContext inside setup_move_flow, plus one MenuFlow + its steps.
-    // Free everything now. (In practice you could loop over submenus to free them; here’s a minimal approach.)
-
-    // 1) Free the MoveContext we allocated:
-    MenuItem* flow_item = NULL;
-    for (int i = 0; i < arrlen(main_menu->items); i++) {
-        if (main_menu->items[i].type == MENU_ITEM_FLOW) {
-            flow_item = &main_menu->items[i];
+    // ── Cleanup ──
+    // Free CopyContext inside the mounted flow:
+    for (int i = 0; i < arrlen(mounted_menu->items); i++) {
+        if (mounted_menu->items[i].type == MENU_ITEM_FLOW) {
+            MenuFlow* flow = (MenuFlow*)mounted_menu->items[i].flow;
+            CopyContext* ctx = (CopyContext*)flow->data;
+            if (ctx) free(ctx);
+            for (int s = 0; s < arrlen(flow->steps); s++) {
+                menu_free(flow->steps[s]);
+            }
+            flow_free(flow);
             break;
         }
     }
-    if (flow_item) {
-        MenuFlow* flow = (MenuFlow*)flow_item->flow;
-        MoveContext* ctx = (MoveContext*)flow->data;
-        if (ctx) {
-            if (ctx->origin_path) free(ctx->origin_path);
-            if (ctx->output_path) free(ctx->output_path);
-            free(ctx);
-        }
-        // 2) Free each step‐menu
-        for (int s = 0; s < arrlen(flow->steps); s++) {
-            menu_free(flow->steps[s]);
-        }
-        // 3) Finally free the flow itself
-        flow_free(flow);
-    }
 
-    // 4) Free the main menu
-    menu_free(main_menu);
+    // Free both menus
+    menu_free(unmounted_menu);
+    menu_free(mounted_menu);
+
     return 0;
 }

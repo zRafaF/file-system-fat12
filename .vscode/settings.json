@@ -34,7 +34,9 @@
         "fat12.h": "c",
         "stb_ds.h": "c",
         "ctype.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "cli_menu.h": "c"
     },
-    "makefile.configureOnOpen": true
+    "makefile.configureOnOpen": true,
+    "cSpell.words": ["diretorio", "diretorios", "Operacao"]
 }
