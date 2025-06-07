@@ -7,13 +7,12 @@
 
 int main(void) {
     Menu* unmounted_menu = menu_create("MENU PRINCIPAL", NULL);
-    Menu* mounted_menu = menu_create("DISK OPERATIONS", NULL);
+    Menu* mounted_menu = menu_create("OPERACOES DE DISCO", NULL);
 
     init_menus(unmounted_menu, mounted_menu);
 
     // Loop, alternando entre os dois menus até o usuário escolher “Quit”
     while (!should_exit()) {
-        printf("should_exit: %d\n", should_exit());
         if (!app_is_mounted()) {
             menu_run(unmounted_menu);
         } else {

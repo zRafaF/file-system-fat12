@@ -39,5 +39,11 @@
         "app.h": "c"
     },
     "makefile.configureOnOpen": true,
-    "cSpell.words": ["diretorio", "diretorios", "Operacao"]
+    "cSpell.words": [
+        "diretorio",
+        "diretorios",
+        "operacao",
+        "Operacao",
+        "OPERACOES"
+    ]
 }

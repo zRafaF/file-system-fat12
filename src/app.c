@@ -30,19 +30,19 @@ void app_unmount_callback(Menu *m) {
 
 void app_ls1_callback(Menu *m) {
     UNUSED(m);
-    printf("Listando arquivos no diretório raiz...\n");
+    printf("Listando arquivos no diretorio raiz...\n");
 }
 void app_ls_callback(Menu *m) {
     UNUSED(m);
-    printf("Listando todos os arquivos e diretórios...\n");
+    printf("Listando todos os arquivos e diretorios...\n");
 }
 void app_rm_callback(Menu *m) {
     UNUSED(m);
-    printf("Removendo arquivo ou diretório...\n");
+    printf("Removendo arquivo ou diretorio...\n");
 }
 
 void app_copy_complete(int copy_type, const char *src, const char *dst) {
-    printf("\nOperação completa:\n");
+    printf("\nOperacao completa:\n");
     printf("  Tipo: %s\n", (copy_type ? "Disco -> Sistema" : "Sistema -> Disco"));
     printf("  Origem: %s\n", src);
     printf("  Destino: %s\n", dst);
