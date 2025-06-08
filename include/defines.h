@@ -7,4 +7,6 @@
 #define PATH_FAT12_IMG "imgs/fat12.img"
 #define PATH_FAT12SUBDIR_IMG "imgs/fat12subdir.img"
 
+#define DEBUG
+
 #endif  // DEFINES_H

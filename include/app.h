@@ -21,7 +21,8 @@ void app_boot_sector_callback(Menu *m);
 void app_ls1_callback(Menu *m);
 void app_ls_callback(Menu *m);
 void app_rm_callback(Menu *m, const char *input);
-void app_debug_callback(Menu *m);
+void app_debug1_callback(Menu *m);
+void app_debug2_callback(Menu *m);
 
 void app_copy_complete(int copy_type, const char *src, const char *dst);
 

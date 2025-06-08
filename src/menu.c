@@ -113,8 +113,13 @@ void init_menus(Menu* unmounted_menu, Menu* mounted_menu) {
     menu_add_item(unmounted_menu, "Montar \"fat12subdir.img\"", app_mount_callback);
     menu_add_item(unmounted_menu, "Sair", quit_callback);
 
+#ifdef DEBUG
+    // Debug menu items
+    menu_add_item(mounted_menu, "Debug1", app_debug1_callback);
+    menu_add_item(mounted_menu, "Debug2", app_debug2_callback);
+#endif
+
     // Mounted menu setup
-    menu_add_item(mounted_menu, "Debug", app_debug_callback);
     menu_add_item(mounted_menu, "Info Boot Sector", app_boot_sector_callback);
     menu_add_item(mounted_menu, "ls-1 (Listar diretorio raiz)", app_ls1_callback);
     menu_add_item(mounted_menu, "ls   (Listar todos arquivos e diretorios)", app_ls_callback);
@@ -122,7 +127,6 @@ void init_menus(Menu* unmounted_menu, Menu* mounted_menu) {
 
     setup_copy_flow(mounted_menu);
     menu_add_item(mounted_menu, "Desmontar Imagem", app_unmount_callback);
-    menu_add_item(mounted_menu, "Sair", quit_callback);
 }
 
 void free_menus(Menu* unmounted_menu, Menu* mounted_menu) {
