@@ -116,43 +116,10 @@ static void _fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node
 
     uint16_t *cluster_list = NULL;
 
-    // Looks on the FAT table for all the clusters that belong to this directory
-    arrpush(cluster_list, dir->metadata.first_cluster);
-
-    size_t number_of_reads = 0;
-
-    while (true) {
-        uint16_t next_cluster = fat12_get_table_entry(cluster_list[arrlen(cluster_list) - 1]);
-        number_of_reads++;
-
-        if (number_of_reads > FAT12_NUM_OF_FAT_TABLES_ENTRIES) {
-            fprintf(stderr, "Too many reads from FAT table, possible infinite loop detected.\n");
-            arrfree(cluster_list);
-            return;  // Prevent infinite loop
-        }
-
-        if (next_cluster >= FAT12_RESERVED_BEGIN && next_cluster <= FAT12_RESERVED_END) {
-            fprintf(stderr, "Invalid cluster encountered: %u\n", next_cluster);
-            arrfree(cluster_list);
-            return;  // Stop on invalid cluster
-        }
-
-        if (next_cluster == FAT12_BAD) {
-            fprintf(stderr, "Bad cluster encountered: %u\n", next_cluster);
-            arrfree(cluster_list);
-            return;  // Stop on bad cluster
-        }
-        if (next_cluster == FAT12_FREE) {
-            fprintf(stderr, "Pointed to free cluster: %u\n", next_cluster);
-            arrfree(cluster_list);
-            return;  // Stop on bad cluster
-        }
-
-        if (next_cluster >= FAT12_EOC_BEGIN && next_cluster <= FAT12_EOC_END) {
-            break;  // End of cluster
-        }
-
-        arrpush(cluster_list, next_cluster);
+    if (!fat12_get_table_entry_chain(dir->metadata.first_cluster, &cluster_list)) {
+        fprintf(stderr, "Failed to get cluster chain for %s\n", dir->metadata.filename);
+        arrfree(cluster_list);
+        return;
     }
 
     for (int i = 0; i < arrlen(cluster_list); i++) {

@@ -10,10 +10,10 @@
 
 #include "defines.h"
 
-#define FAT12_FAT_TABLES_START 1                                                               // FAT12 starts at sector 1
-#define FAT12_NUM_OF_FAT_TABLES_SECTORS 9                                                      // FAT12 can have up to 9 sectors for the FAT table
-#define FAT12_NUM_OF_FAT_TABLES_ENTRIES ((SECTOR_SIZE * FAT12_NUM_OF_FAT_TABLES_SECTORS) / 3)  // Each FAT12 entry is 1.5 bytes, so we divide by 3
-#define FAT12_DIRECTORY_ENTRIES_PER_SECTOR 16                                                  // Maximum number of entries 512 / 32 = 16 entries per sector
+#define FAT12_FAT_TABLES_START 1                                                                     // FAT12 starts at sector 1
+#define FAT12_NUM_OF_FAT_TABLES_SECTORS 9                                                            // FAT12 can have up to 9 sectors for the FAT table
+#define FAT12_NUM_OF_FAT_TABLES_ENTRIES (((SECTOR_SIZE * FAT12_NUM_OF_FAT_TABLES_SECTORS) / 3) + 2)  // Each FAT12 entry is 1.5 bytes, so we divide by 3
+#define FAT12_DIRECTORY_ENTRIES_PER_SECTOR 16                                                        // Maximum number of entries 512 / 32 = 16 entries per sector
 
 #define FAT12_FILE_NAME_LENGTH 8       // Maximum length of a file name in FAT12
 #define FAT12_FILE_EXTENSION_LENGTH 3  // Maximum length of a file extension in FAT12
@@ -113,6 +113,10 @@ uint8_t *fat12_read_data_sector(FILE *disk, uint8_t *buffer, uint16_t sector_num
 uint8_t *fat12_load_full_fat_table(FILE *disk);
 
 uint16_t fat12_get_table_entry(uint16_t entry_idx);
+
+// Reads a FAT12 table entry and returns the cluster chain starting from the first cluster.
+// WARNING: The chain must be freed after use.
+bool fat12_get_table_entry_chain(uint16_t first_entry, uint16_t **chain);
 
 char *fat12_attribute_to_string(uint8_t attribute);
 
