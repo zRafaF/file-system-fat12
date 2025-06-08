@@ -7,8 +7,8 @@
 #include "fat12.h"
 #include "fat12_helpers.h"
 
-#define FS_MAX_DIRECTORY_DEPTH 32                                                          // Maximum depth of the directory tree
-#define FS_MAX_FILENAME_LENGTH (FAT12_FILE_NAME_LENGTH + FAT12_FILE_EXTENSION_LENGTH + 1)  // Maximum length of a file name
+#define FS_MAX_DIRECTORY_DEPTH 32                                                              // Maximum depth of the directory tree
+#define FS_MAX_FILENAME_LENGTH (FAT12_FILE_NAME_LENGTH + 1 + FAT12_FILE_EXTENSION_LENGTH + 1)  // Maximum length of a file name +2 for the dot and null terminator
 
 typedef struct {
     fat12_file_subdir_s *files;    // Array of files in the directory
