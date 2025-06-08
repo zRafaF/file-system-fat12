@@ -7,8 +7,7 @@ void fs_print_file_leaf(fat12_file_subdir_s dir, uint8_t depth) {
         printf("  ");
     }
 
-    static const size_t max_filename_length = sizeof(dir.filename) + sizeof(dir.extension) + 1;
-    char file_name[max_filename_length];
+    char file_name[FS_MAX_FILENAME_LENGTH];
     f12h_format_filename(dir, file_name);
 
     printf("%s", file_name);
@@ -167,6 +166,7 @@ fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
     root->children = NULL;
     root->type = FS_DIRECTORY_TYPE_SUBDIR;
     memset(&root->metadata, 0, sizeof(root->metadata));
+    root->metadata.filename[0] = '/';  // Root directory name
     root->depth = 0;
 
     // read the very first (root) directory entries
@@ -210,20 +210,41 @@ fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
     return root;
 }
 
-void fs_print_directory_tree(fs_directory_tree_node_t *dir_tree) {
-    if (!dir_tree) return;
-    for (size_t i = 0; i < (size_t)arrlen(dir_tree->children); i++) {
-        fs_directory_tree_node_t *child = dir_tree->children[i];
-        for (size_t j = 0; j < child->depth; j++)
-            printf("  ");
+static void _fs_print_tree_ascii(
+    fs_directory_tree_node_t *node,
+    const char *prefix,
+    bool is_last) {
+    char name[FS_MAX_FILENAME_LENGTH];
+    f12h_format_filename(node->metadata, name);
 
-        if (child->type == FS_DIRECTORY_TYPE_FILE) {
-            fs_print_file_leaf(child->metadata, child->depth);
-        } else {
-            printf("%s/\n", child->metadata.filename);
-        }
+    // Use ASCII-friendly tree characters
+    printf("%s", prefix);
+    printf("%s", is_last ? "`-- " : "|-- ");
+    printf("%s%s\n", name,
+           node->type == FS_DIRECTORY_TYPE_SUBDIR ? "/" : "");
 
-        fs_print_directory_tree(child);
+    // Build new prefix
+    char new_prefix[256];
+    snprintf(new_prefix, sizeof(new_prefix), "%s%s",
+             prefix,
+             is_last ? "    " : "|   ");
+
+    size_t count = arrlen(node->children);
+    for (size_t i = 0; i < count; i++) {
+        bool last = (i + 1 == count);
+        _fs_print_tree_ascii(node->children[i], new_prefix, last);
+    }
+}
+
+void fs_print_directory_tree(fs_directory_tree_node_t *root) {
+    if (!root) return;
+
+    printf("/\n");
+
+    size_t count = arrlen(root->children);
+    for (size_t i = 0; i < count; i++) {
+        bool last = (i + 1 == count);
+        _fs_print_tree_ascii(root->children[i], "", last);
     }
 }
 

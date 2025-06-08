@@ -14,6 +14,9 @@
 #define FAT12_NUM_OF_FAT_TABLES_SECTORS 9      // FAT12 can have up to 9 sectors for the FAT table
 #define FAT12_DIRECTORY_ENTRIES_PER_SECTOR 16  // Maximum number of entries 512 / 32 = 16 entries per sector
 
+#define FAT12_FILE_NAME_LENGTH 8       // Maximum length of a file name in FAT12
+#define FAT12_FILE_EXTENSION_LENGTH 3  // Maximum length of a file extension in FAT12
+
 #define FAT12_ROOT_DIRECTORY_START 19                                                                         // Root directory starts at cluster 19 for FAT12
 #define FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS 14                                                                // FAT12 root directory can occupy up to 14 sectors
 #define FAT12_ROOT_DIRECTORY_ENTRIES FAT12_DIRECTORY_ENTRIES_PER_SECTOR *FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS  // Total number of entries in the root directory
@@ -68,8 +71,8 @@ typedef enum {
 } fat12_file_subdir_attributes_e;
 
 typedef struct __attribute__((__packed__)) {
-    char filename[8];
-    char extension[3];
+    char filename[FAT12_FILE_NAME_LENGTH];
+    char extension[FAT12_FILE_EXTENSION_LENGTH];
     uint8_t attributes;         // File attributes
     uint8_t reserved[2];        // Reserved
     uint16_t creation_time;     // Creation time

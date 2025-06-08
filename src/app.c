@@ -87,13 +87,10 @@ void app_ls1_callback(Menu *m) {
 // List all files and directories
 void app_ls_callback(Menu *m) {
     UNUSED(m);
-
-    fs_directory_t root_dir = fs_read_root_directory(disk);
-    fs_directory_t *sub_dirs = NULL;
-
-    fs_free_directory(root_dir);
-    fs_free_directory(*sub_dirs);
-    arrfree(sub_dirs);
+    fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
+    printf("\n=======  LISTANDO ARVORE DE DIRETORIOS  =======\n");
+    fs_print_directory_tree(disk_tree);
+    fs_free_disk_tree(disk_tree);
 }
 
 void app_rm_callback(Menu *m, const char *input) {
@@ -111,15 +108,6 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
 
 #ifdef DEBUG
 void app_debug1_callback(Menu *m) {
-    UNUSED(m);
-    fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
-    printf("\n=======  LISTANDO ARVORE DE DIRETORIOS  =======\n");
-    fs_print_directory_tree(disk_tree);
-    fs_free_disk_tree(disk_tree);
-    // menu_wait_for_any_key();
-}
-
-void app_debug2_callback(Menu *m) {
     UNUSED(m);
 
     fs_directory_t sub_dir = fs_read_directory(disk, 6);
@@ -139,6 +127,10 @@ void app_debug2_callback(Menu *m) {
     }
 
     fs_free_directory(sub_dir);
+}
+
+void app_debug2_callback(Menu *m) {
+    UNUSED(m);
 
     fat12_file_subdir_s *dir_entries = NULL;
 
