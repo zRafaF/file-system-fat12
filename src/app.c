@@ -98,6 +98,57 @@ void app_rm_callback(Menu *m, const char *input) {
     printf("Removendo arquivo ou diretorio: %s\n", input);
 }
 
+bool _app_copy_sys_to_disk(const char *src, const char *dst) {
+    fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
+    if (disk_tree == NULL) {
+        printf("Erro ao criar a arvore de diretorios do disco.\n");
+        return false;
+    }
+
+    fs_directory_tree_node_t *target_node = fs_get_node_by_path(disk_tree, src);
+    if (target_node == NULL) {
+        printf("Caminho '%s' nao encontrado no disco.\n", src);
+        fs_free_disk_tree(disk_tree);
+        return false;
+    }
+
+    FILE *target_file = fopen(dst, "w");
+    if (target_file == NULL) {
+        perror("Erro ao abrir o arquivo de destino");
+        return false;
+    }
+
+    uint16_t *cluster_list = NULL;
+    if (!fat12_get_table_entry_chain(target_node->metadata.first_cluster, &cluster_list)) {
+        fprintf(stderr, "Nao foi possivel encontrar a lista de clusters de %s\n", target_node->metadata.filename);
+        arrfree(cluster_list);
+        return false;
+    }
+
+    uint32_t remaining_size = target_node->metadata.file_size;
+    for (int i = 0; i < arrlen(cluster_list); i++) {
+        printf("Escrevendo %i/%lu...\n", i + 1, arrlen(cluster_list));
+
+        uint8_t buffer[SECTOR_SIZE];
+        if (!fat12_read_data_sector(disk, buffer, cluster_list[i])) {
+            fprintf(stderr, "Erro ao ler o setor de dados do cluster %d\n", cluster_list[i]);
+            arrfree(cluster_list);
+            fs_free_disk_tree(disk_tree);
+            return false;
+        }
+
+        size_t to_write = (remaining_size > SECTOR_SIZE) ? SECTOR_SIZE : remaining_size;
+        fwrite(buffer, 1, to_write, target_file);
+        remaining_size -= to_write;
+        if (remaining_size == 0) break;  // no more data to write
+    }
+
+    fclose(target_file);
+    fs_free_disk_tree(disk_tree);
+    arrfree(cluster_list);
+    return true;
+}
+
 void app_copy_complete(int copy_type, const char *src, const char *dst) {
     printf("\n=======  REALIZANDO COPIA DE ARQUIVOS  =======\n");
     printf("----------------------------------------------\n");
@@ -109,64 +160,45 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
     switch (copy_type) {
         case 0:
             printf("Copiando do sistema de arquivos para o disco.\n");
+            if (_app_copy_sys_to_disk(src, dst))
+                printf("Arquivo copiado com sucesso para o disco.\n");
+            else
+                printf("Erro ao copiar o arquivo para o disco.\n");
 
-            fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
-            if (disk_tree == NULL) {
-                printf("Erro ao criar a arvore de diretorios do disco.\n");
+            break;
+        case 1:
+            printf("Copiando do disco para o sistema de arquivos.\n");
+
+            FILE *source_file = fopen(src, "r");
+            if (source_file == NULL) {
+                perror("Erro ao abrir o arquivo de origem");
                 menu_wait_for_any_key();
                 return;
             }
 
-            fs_directory_tree_node_t *target_node = fs_get_node_by_path(disk_tree, src);
-            if (target_node == NULL) {
-                printf("Caminho '%s' nao encontrado no disco.\n", src);
-                fs_free_disk_tree(disk_tree);
-                menu_wait_for_any_key();
-                return;
-            }
+            uint8_t buffer[SECTOR_SIZE];
 
-            FILE *target_file = fopen(dst, "w");
-            if (target_file == NULL) {
-                perror("Erro ao abrir o arquivo de destino");
-                menu_wait_for_any_key();
-                return;
-            }
-
-            uint16_t *cluster_list = NULL;
-            if (!fat12_get_table_entry_chain(target_node->metadata.first_cluster, &cluster_list)) {
-                fprintf(stderr, "Nao foi possivel encontrar a lista de clusters de %s\n", target_node->metadata.filename);
-                arrfree(cluster_list);
-                menu_wait_for_any_key();
-                return;
-            }
-
-            uint32_t remaining_size = target_node->metadata.file_size;
-            for (int i = 0; i < arrlen(cluster_list); i++) {
-                printf("Escrevendo %i/%lu...\n", i + 1, arrlen(cluster_list));
-
-                uint8_t buffer[512];
-                if (!fat12_read_data_sector(disk, buffer, cluster_list[i])) {
-                    fprintf(stderr, "Erro ao ler o setor de dados do cluster %d\n", cluster_list[i]);
-                    arrfree(cluster_list);
-                    fs_free_disk_tree(disk_tree);
+            // Calculate the number of sectors needed
+            size_t bytes_read;
+            size_t total_bytes = 0;
+            while ((bytes_read = fread(buffer, 1, SECTOR_SIZE, source_file)) > 0) {
+                total_bytes += bytes_read;
+                uint16_t cluster = fat12_get_table_entry(total_bytes / SECTOR_SIZE);
+                if (cluster == FAT12_BAD || cluster == FAT12_FREE) {
+                    fprintf(stderr, "Erro ao obter o cluster para escrita.\n");
+                    fclose(source_file);
                     menu_wait_for_any_key();
                     return;
                 }
 
-                size_t to_write = (remaining_size > 512) ? 512 : remaining_size;
-                fwrite(buffer, 1, to_write, target_file);
-                remaining_size -= to_write;
-                if (remaining_size == 0) break;  // no more data to write
+                if (!fat12_read_data_sector(disk, buffer, cluster)) {
+                    fprintf(stderr, "Erro ao escrever no disco.\n");
+                    fclose(source_file);
+                    menu_wait_for_any_key();
+                    return;
+                }
             }
 
-            fclose(target_file);
-            fs_free_disk_tree(disk_tree);
-            arrfree(cluster_list);
-
-            printf("Arquivo copiado com sucesso para o disco.\n");
-            break;
-        case 1:
-            printf("Copiado do disco para o sistema de arquivos.\n");
             break;
         default:
             printf("Tipo de copia desconhecido.\n");
