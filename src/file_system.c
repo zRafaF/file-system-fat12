@@ -90,7 +90,7 @@ fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster) {
     fat12_file_subdir_s *subdirs = NULL;
 
     for (int i = 0; i < arrlen(dir_entries); i++) {
-        if (dir_entries[i].attributes & FAT12_ATTR_DIRECTORY) {
+        if (dir_entries[i].attributes == FAT12_ATTR_DIRECTORY) {
             arrpush(subdirs, dir_entries[i]);
         } else if (dir_entries[i].extension[0] != 0x00 || dir_entries[i].filename[0] != 0x00) {
             arrpush(files, dir_entries[i]);
@@ -102,7 +102,147 @@ fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster) {
     return dir;
 }
 
+static void fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_t *dir) {
+    if (dir->depth >= FS_MAX_DIRECTORY_DEPTH) {
+        fprintf(stderr, "Maximum directory depth reached: %zu\n", dir->depth);
+        return;  // Prevent infinite recursion
+    }
+
+    // read this directory’s contents
+    fs_directory_t listing = fs_read_directory(disk, dir->metadata.first_cluster);
+
+    // files
+    for (int i = 0; i < arrlen(listing.files); i++) {
+        fs_directory_tree_node_t *file_node = malloc(sizeof(*file_node));
+        if (!file_node) {
+            perror("malloc file node");
+            exit(EXIT_FAILURE);
+        }
+        file_node->parent = dir;
+        file_node->children = NULL;
+        file_node->type = FS_DIRECTORY_TYPE_FILE;
+        file_node->metadata = listing.files[i];
+        file_node->depth = dir->depth + 1;
+        printf("Adding file: %s\n", listing.files[i].filename);
+
+        arrpush(dir->children, file_node);
+    }
+
+    // subdirectories
+    for (int i = 0; i < arrlen(listing.subdirs); i++) {
+        fs_directory_tree_node_t *subdir_node = malloc(sizeof(*subdir_node));
+        if (!subdir_node) {
+            perror("malloc subdir node");
+            exit(EXIT_FAILURE);
+        }
+        subdir_node->parent = dir;
+        subdir_node->children = NULL;
+        subdir_node->type = FS_DIRECTORY_TYPE_SUBDIR;
+        subdir_node->metadata = listing.subdirs[i];
+        subdir_node->depth = dir->depth + 1;
+
+        printf("Adding subdirectory: %s/\n", listing.subdirs[i].filename);
+
+        // recurse
+        fs_recursive_create_subdirs_tree(disk, subdir_node);
+
+        arrpush(dir->children, subdir_node);
+    }
+
+    fs_free_directory(listing);
+}
+
+fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
+    // allocate the root node on the heap
+    fs_directory_tree_node_t *root = malloc(sizeof(*root));
+    if (!root) {
+        perror("malloc root node");
+        exit(EXIT_FAILURE);
+    }
+
+    // init root
+    root->parent = NULL;
+    root->children = NULL;
+    root->type = FS_DIRECTORY_TYPE_SUBDIR;
+    memset(&root->metadata, 0, sizeof(root->metadata));
+    root->depth = 0;
+
+    // read the very first (root) directory entries
+    fs_directory_t root_dir = fs_read_root_directory(disk);
+
+    // add files in root
+    for (int i = 0; i < arrlen(root_dir.files); i++) {
+        fs_directory_tree_node_t *file_node = malloc(sizeof(*file_node));
+        if (!file_node) {
+            perror("malloc file node");
+            exit(EXIT_FAILURE);
+        }
+        file_node->parent = root;
+        file_node->children = NULL;
+        file_node->type = FS_DIRECTORY_TYPE_FILE;
+        file_node->metadata = root_dir.files[i];
+        file_node->depth = 1;
+        arrpush(root->children, file_node);
+        printf("Adding file: %s\n", root_dir.files[i].filename);
+    }
+
+    // add subdirectories in root
+    for (int i = 0; i < arrlen(root_dir.subdirs); i++) {
+        fs_directory_tree_node_t *subdir_node = malloc(sizeof(*subdir_node));
+        if (!subdir_node) {
+            perror("malloc subdir node");
+            exit(EXIT_FAILURE);
+        }
+        subdir_node->parent = root;
+        subdir_node->children = NULL;
+        subdir_node->type = FS_DIRECTORY_TYPE_SUBDIR;
+        subdir_node->metadata = root_dir.subdirs[i];
+        subdir_node->depth = 1;
+
+        printf("Adding subdirectory: %s/\n", root_dir.subdirs[i].filename);
+        // recurse into it
+        fs_recursive_create_subdirs_tree(disk, subdir_node);
+
+        arrpush(root->children, subdir_node);
+    }
+
+    fs_free_directory(root_dir);
+    return root;
+}
+
+void fs_print_directory_tree(fs_directory_tree_node_t *dir_tree) {
+    if (!dir_tree) return;
+    for (size_t i = 0; i < arrlen(dir_tree->children); i++) {
+        fs_directory_tree_node_t *child = dir_tree->children[i];
+        for (size_t j = 0; j < child->depth; j++)
+            printf("  ");
+
+        if (child->type == FS_DIRECTORY_TYPE_FILE) {
+            fs_print_file_leaf(child->metadata, child->depth);
+        } else {
+            printf("%s/\n", child->metadata.filename);
+        }
+
+        fs_print_directory_tree(child);
+    }
+}
+
 void fs_free_directory(fs_directory_t dir) {
     arrfree(dir.files);
     arrfree(dir.subdirs);
+}
+
+void fs_free_disk_tree(fs_directory_tree_node_t *dir_tree) {
+    if (!dir_tree) return;
+
+    // First, recursively free all children
+    for (int i = 0, n = arrlen(dir_tree->children); i < n; i++) {
+        fs_free_disk_tree(dir_tree->children[i]);
+    }
+
+    // Free the dynamic array of children pointers
+    arrfree(dir_tree->children);
+
+    // Finally, free this node
+    free(dir_tree);
 }

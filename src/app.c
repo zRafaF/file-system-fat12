@@ -84,28 +84,26 @@ void app_ls1_callback(Menu *m) {
     fs_free_directory(root_dir);
 }
 
+static fs_directory_t *fs_read_subdirectories(FILE *disk, fat12_file_subdir_s *directory, fs_directory_t *subdirs) {
+    for (int i = 0; i < arrlen(directory); i++) {
+        fs_directory_t sub_dir = fs_read_directory(disk, directory[i].first_cluster);
+        arrpush(subdirs, sub_dir);
+    }
+    return subdirs;
+}
+
+// List all files and directories
 void app_ls_callback(Menu *m) {
     UNUSED(m);
 
-    fat12_file_subdir_s *dir_entries = NULL;
+    fs_directory_t root_dir = fs_read_root_directory(disk);
+    fs_directory_t *sub_dirs = NULL;
 
-    for (uint8_t i = 0; i < 12; i++) {
-        fat12_file_subdir_s dir_entry = fat12_read_directory_entry(disk, i);
-
-        if (dir_entry.filename[0] != 0x00) {
-            arrpush(dir_entries, dir_entry);
-        }
-    }
-
-    for (int i = 0; i < arrlen(dir_entries); i++) {
-        fat12_file_subdir_s dir_entry = dir_entries[i];
-        fat12_print_directory_info(dir_entry);
-    }
-
-    arrfree(dir_entries);
-
-    printf("Listando todos os arquivos e diretorios...\n");
+    fs_free_directory(root_dir);
+    fs_free_directory(*sub_dirs);
+    arrfree(sub_dirs);
 }
+
 void app_rm_callback(Menu *m, const char *input) {
     UNUSED(m);
     printf("Removendo arquivo ou diretorio: %s\n", input);
@@ -122,7 +120,15 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
 #ifdef DEBUG
 void app_debug1_callback(Menu *m) {
     UNUSED(m);
-    printf("Debugging information:\n");
+    fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
+    printf("\n=======  LISTANDO ARVORE DE DIRETORIOS  =======\n");
+    fs_print_directory_tree(disk_tree);
+    fs_free_disk_tree(disk_tree);
+    // menu_wait_for_any_key();
+}
+
+void app_debug2_callback(Menu *m) {
+    UNUSED(m);
 
     fs_directory_t sub_dir = fs_read_directory(disk, 6);
 
@@ -132,6 +138,7 @@ void app_debug1_callback(Menu *m) {
     for (int i = 0; i < arrlen(sub_dir.subdirs); i++) {
         fat12_file_subdir_s subdir = sub_dir.subdirs[i];
         fs_print_file_leaf(subdir, 0);
+        fat12_print_directory_info(subdir);
     }
 
     for (int i = 0; i < arrlen(sub_dir.files); i++) {
@@ -141,11 +148,6 @@ void app_debug1_callback(Menu *m) {
 
     fs_free_directory(sub_dir);
 
-    printf("\n");
-}
-
-void app_debug2_callback(Menu *m) {
-    UNUSED(m);
     fat12_file_subdir_s *dir_entries = NULL;
 
     for (uint8_t i = 0; i < 12; i++) {
