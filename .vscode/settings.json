@@ -40,12 +40,14 @@
         "app.h": "c",
         "file_system.h": "c",
         "fat12_helpers.h": "c",
-        "MIC.C": "cpp"
+        "MIC.C": "cpp",
+        "compare": "c"
     },
     "makefile.configureOnOpen": true,
     "cSpell.words": [
         "diretorio",
         "diretorios",
+        "Extensao",
         "operacao",
         "Operacao",
         "OPERACOES",

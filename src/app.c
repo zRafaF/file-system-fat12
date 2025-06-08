@@ -149,6 +149,57 @@ bool _app_copy_sys_to_disk(const char *src, const char *dst) {
     return true;
 }
 
+bool _app_copy_disk_to_sys(const char *src, const char *dst) {
+    printf("Copiando do disco para o sistema...\n");
+
+    fs_fat_compatible_filename_t filename = fs_get_filename_from_path(src);
+    if (filename.file[0] == 0) {
+        fprintf(stderr, "Nome de arquivo invalido: '%.*s'\n", FAT12_FILE_NAME_LENGTH, src);
+        return false;
+    }
+
+    printf("Nome: %.*s\n", FAT12_FILE_NAME_LENGTH, filename.file);
+    printf("Extensao: %.*s\n\n", FAT12_FILE_EXTENSION_LENGTH, filename.extension);
+
+    FILE *source_file = fopen(src, "r");
+    if (source_file == NULL) {
+        perror("Erro ao abrir o arquivo de origem");
+        return false;
+    }
+
+    uint8_t buffer[SECTOR_SIZE] = {0};
+
+    uint16_t *cluster_list = NULL;
+
+    // Calculate the number of sectors needed
+    size_t bytes_read = 0;
+    uint32_t total_bytes = 0;
+    uint16_t nex_entry_idx = 0;
+
+    while ((bytes_read = fread(buffer, 1, SECTOR_SIZE, source_file)) > 0) {
+        // Find the next free entry in the FAT table
+        uint16_t table_entry = fat12_find_next_free_entry(nex_entry_idx);
+        if (table_entry < FAT12_FAT_TABLES_RESERVED_ENTRIES) {
+            fprintf(stderr, "Nao ha entradas livres na tabela FAT.\n");
+            fclose(source_file);
+            arrfree(cluster_list);
+            return false;
+        }
+
+        // Add the entry to the cluster list
+        arrpush(cluster_list, table_entry);
+
+        total_bytes += bytes_read;
+        nex_entry_idx = table_entry + 1;
+
+        printf("Escrevendo %d bytes no cluster %d...\n", bytes_read, table_entry);
+    }
+
+    fclose(source_file);
+    arrfree(cluster_list);
+    return true;
+}
+
 void app_copy_complete(int copy_type, const char *src, const char *dst) {
     printf("\n=======  REALIZANDO COPIA DE ARQUIVOS  =======\n");
     printf("----------------------------------------------\n");
@@ -159,49 +210,19 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
 
     switch (copy_type) {
         case 0:
-            printf("Copiando do sistema de arquivos para o disco.\n");
             if (_app_copy_sys_to_disk(src, dst))
                 printf("Arquivo copiado com sucesso para o disco.\n");
             else
                 printf("Erro ao copiar o arquivo para o disco.\n");
-
             break;
         case 1:
-            printf("Copiando do disco para o sistema de arquivos.\n");
-
-            FILE *source_file = fopen(src, "r");
-            if (source_file == NULL) {
-                perror("Erro ao abrir o arquivo de origem");
-                menu_wait_for_any_key();
-                return;
-            }
-
-            uint8_t buffer[SECTOR_SIZE];
-
-            // Calculate the number of sectors needed
-            size_t bytes_read;
-            size_t total_bytes = 0;
-            while ((bytes_read = fread(buffer, 1, SECTOR_SIZE, source_file)) > 0) {
-                total_bytes += bytes_read;
-                uint16_t cluster = fat12_get_table_entry(total_bytes / SECTOR_SIZE);
-                if (cluster == FAT12_BAD || cluster == FAT12_FREE) {
-                    fprintf(stderr, "Erro ao obter o cluster para escrita.\n");
-                    fclose(source_file);
-                    menu_wait_for_any_key();
-                    return;
-                }
-
-                if (!fat12_read_data_sector(disk, buffer, cluster)) {
-                    fprintf(stderr, "Erro ao escrever no disco.\n");
-                    fclose(source_file);
-                    menu_wait_for_any_key();
-                    return;
-                }
-            }
-
+            if (_app_copy_disk_to_sys(src, dst))
+                printf("Arquivo copiado com sucesso do disco.\n");
+            else
+                printf("Erro ao copiar o arquivo do disco.\n");
             break;
         default:
-            printf("Tipo de copia desconhecido.\n");
+            printf("Erro: Tipo de copia desconhecido.\n");
             break;
     }
 
@@ -219,6 +240,7 @@ void app_debug1_callback(Menu *m) {
 
 void app_debug2_callback(Menu *m) {
     UNUSED(m);
-    app_copy_complete(0, "/ARQ.TXT", "./teste.txt");
+    // app_copy_complete(0, "/ARQ.TXT", "./teste.txt");
+    app_copy_complete(1, "teste.txt", "/TT.TXT");
 }
 #endif

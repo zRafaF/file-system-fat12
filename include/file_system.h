@@ -20,6 +20,11 @@ typedef enum {
     FS_DIRECTORY_TYPE_SUBDIR,  // Represents a subdirectory
 } fs_directory_type_e;
 
+typedef struct {
+    char file[FAT12_FILE_NAME_LENGTH];
+    char extension[FAT12_FILE_EXTENSION_LENGTH];
+} fs_fat_compatible_filename_t;
+
 struct fs_directory_tree_node;
 
 typedef struct fs_directory_tree_node {
@@ -54,5 +59,8 @@ void fs_print_directory_tree(fs_directory_tree_node_t *dir_tree);
 void fs_free_directory(fs_directory_t dir);
 
 void fs_free_disk_tree(fs_directory_tree_node_t *dir_tree);
+
+// Extracts the filename from a given path. That is the part after the last '/' or '\' character.
+fs_fat_compatible_filename_t fs_get_filename_from_path(const char *path);
 
 #endif  // FILE_SYSTEM_H

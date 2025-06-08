@@ -327,3 +327,32 @@ void fs_free_disk_tree(fs_directory_tree_node_t *dir_tree) {
     arrfree(dir_tree->children);
     free(dir_tree);
 }
+
+fs_fat_compatible_filename_t fs_get_filename_from_path(const char *path) {
+    fs_fat_compatible_filename_t filename = {0};
+
+    if (!path || strlen(path) == 0) {
+        return filename;  // Return empty filename if path is NULL or empty
+    }
+
+    const char *last_slash = strrchr(path, '/');
+    if (!last_slash) {
+        last_slash = strrchr(path, '\\');  // Check for backslash
+    }
+
+    if (last_slash) {
+        strncpy(filename.file, last_slash + 1, FAT12_FILE_NAME_LENGTH);
+    } else {
+        strncpy(filename.file, path, FAT12_FILE_NAME_LENGTH);
+    }
+
+    char *dot = strrchr(filename.file, '.');
+    if (dot) {
+        *dot = '\0';  // Split at the dot
+        strncpy(filename.extension, dot + 1, FAT12_FILE_EXTENSION_LENGTH);
+    } else {
+        filename.extension[0] = '\0';  // No extension found
+    }
+
+    return filename;
+}

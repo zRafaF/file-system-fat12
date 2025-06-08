@@ -213,7 +213,7 @@ uint8_t *fat12_load_full_fat_table(FILE *disk) {
     memset(fat_table, 0, sizeof(fat_table));
 
     // Read the FAT table into the buffer
-    size_t bytes_read = fread(fat_table, sizeof(uint8_t), SECTOR_SIZE * 9, disk);
+    size_t bytes_read = fread(fat_table, sizeof(uint8_t), SECTOR_SIZE * FAT12_NUM_OF_FAT_TABLES_SECTORS, disk);
     if (bytes_read != SECTOR_SIZE * FAT12_NUM_OF_FAT_TABLES_SECTORS) {
         perror("Failed to read FAT table data");
         return NULL;
@@ -249,6 +249,21 @@ uint16_t fat12_get_table_entry(uint16_t entry_idx) {
     }
 
     return value;
+}
+
+uint16_t fat12_find_next_free_entry(uint16_t start_idx) {
+    assert(has_loaded_fat_table);
+    assert(fat_table != NULL);
+    assert(start_idx < FAT12_NUM_OF_FAT_TABLES_ENTRIES);
+
+    for (uint16_t i = start_idx; i < FAT12_NUM_OF_FAT_TABLES_ENTRIES; i++) {
+        if (fat12_get_table_entry(i) == FAT12_FREE) {
+            return i;
+        }
+    }
+
+    fprintf(stderr, "No free entries found in the FAT table.\n");
+    return 0;  // < 2 indicates no free entries found
 }
 
 bool fat12_get_table_entry_chain(uint16_t first_entry, uint16_t **chain) {
