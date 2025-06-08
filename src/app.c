@@ -142,7 +142,7 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
 
             uint32_t remaining_size = target_node->metadata.file_size;
             for (int i = 0; i < arrlen(cluster_list); i++) {
-                printf("Escrevendo %i/%llu...\n", i + 1, arrlen(cluster_list));
+                printf("Escrevendo %i/%lu...\n", i + 1, arrlen(cluster_list));
 
                 uint8_t buffer[512];
                 if (!fat12_read_data_sector(disk, buffer, cluster_list[i])) {

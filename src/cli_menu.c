@@ -167,46 +167,40 @@ static void print_menu(Menu* menu, int selected) {
 }
 
 char* menu_get_input(const char* prompt, int visible) {
-    (void)visible;  // Silence “unused parameter” warning
-
-    disable_raw_mode();
+    disable_raw_mode();  // Restore canonical mode for compatibility
 
     printf("%s", prompt);
     fflush(stdout);
+
+    enable_raw_mode();  // Enable raw mode for immediate key reading
 
     char* input = NULL;
     int capacity = 0;
     int len = 0;
     int c;
 
-#ifdef __linux__
-    // On Linux, re‐enable echo for visible input
-    struct termios orig, new;
-    tcgetattr(STDIN_FILENO, &orig);
-    new = orig;
-    new.c_lflag |= ECHO;
-    tcsetattr(STDIN_FILENO, TCSANOW, &new);
-#endif
-
-    while ((c = getchar()) != '\n' && c != EOF) {
-        if (c == 127 || c == 8) {  // Backspace
+    while (1) {
+        c = read_key();
+        if (c == '\r' || c == '\n') {
+            break;
+        } else if (c == 127 || c == 8) {  // Backspace or DEL
             if (len > 0) {
                 len--;
                 printf("\b \b");
                 fflush(stdout);
             }
-            continue;
+        } else if (isprint(c)) {
+            if (len + 1 >= capacity) {
+                capacity = capacity == 0 ? 32 : capacity * 2;
+                input = realloc(input, capacity);
+            }
+            input[len++] = c;
+            if (visible) {
+                putchar(c);
+                fflush(stdout);
+            }
         }
-        if (len + 1 >= capacity) {
-            capacity = capacity == 0 ? 32 : capacity * 2;
-            input = realloc(input, capacity);
-        }
-        input[len++] = c;
     }
-
-#ifdef __linux__
-    tcsetattr(STDIN_FILENO, TCSANOW, &orig);
-#endif
 
     if (input) {
         input[len] = '\0';
@@ -214,7 +208,9 @@ char* menu_get_input(const char* prompt, int visible) {
         input = strdup("");
     }
 
-    enable_raw_mode();
+    putchar('\n');
+    fflush(stdout);
+    disable_raw_mode();  // Go back to cooked mode
     return input;
 }
 
