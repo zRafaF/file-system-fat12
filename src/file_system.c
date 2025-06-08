@@ -125,27 +125,13 @@ static void _fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node
     for (int i = 0; i < arrlen(cluster_list); i++) {
         fs_directory_t listing = fs_read_directory(disk, cluster_list[i]);
 
-        // files
-        for (int i = 0; i < arrlen(listing.files); i++) {
-            fs_directory_tree_node_t *file_node = malloc(sizeof(*file_node));
-            if (!file_node) {
-                perror("malloc file node");
-                exit(EXIT_FAILURE);
-            }
-            file_node->parent = dir;
-            file_node->children = NULL;
-            file_node->type = FS_DIRECTORY_TYPE_FILE;
-            file_node->metadata = listing.files[i];
-            file_node->depth = dir->depth + 1;
-
-            arrpush(dir->children, file_node);
-        }
-
         // subdirectories
         for (int i = 0; i < arrlen(listing.subdirs); i++) {
             fs_directory_tree_node_t *subdir_node = malloc(sizeof(*subdir_node));
             if (!subdir_node) {
                 perror("malloc subdir node");
+                fs_free_directory(listing);
+                arrfree(cluster_list);
                 exit(EXIT_FAILURE);
             }
             subdir_node->parent = dir;
@@ -159,6 +145,25 @@ static void _fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node
 
             arrpush(dir->children, subdir_node);
         }
+
+        // files
+        for (int i = 0; i < arrlen(listing.files); i++) {
+            fs_directory_tree_node_t *file_node = malloc(sizeof(*file_node));
+            if (!file_node) {
+                perror("malloc file node");
+                fs_free_directory(listing);
+                arrfree(cluster_list);
+                exit(EXIT_FAILURE);
+            }
+            file_node->parent = dir;
+            file_node->children = NULL;
+            file_node->type = FS_DIRECTORY_TYPE_FILE;
+            file_node->metadata = listing.files[i];
+            file_node->depth = dir->depth + 1;
+
+            arrpush(dir->children, file_node);
+        }
+
         fs_free_directory(listing);
     }
 
@@ -184,26 +189,12 @@ fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
     // read the very first (root) directory entries
     fs_directory_t root_dir = fs_read_root_directory(disk);
 
-    // add files in root
-    for (int i = 0; i < arrlen(root_dir.files); i++) {
-        fs_directory_tree_node_t *file_node = malloc(sizeof(*file_node));
-        if (!file_node) {
-            perror("malloc file node");
-            exit(EXIT_FAILURE);
-        }
-        file_node->parent = root;
-        file_node->children = NULL;
-        file_node->type = FS_DIRECTORY_TYPE_FILE;
-        file_node->metadata = root_dir.files[i];
-        file_node->depth = 1;
-        arrpush(root->children, file_node);
-    }
-
     // add subdirectories in root
     for (int i = 0; i < arrlen(root_dir.subdirs); i++) {
         fs_directory_tree_node_t *subdir_node = malloc(sizeof(*subdir_node));
         if (!subdir_node) {
             perror("malloc subdir node");
+            fs_free_directory(root_dir);
             exit(EXIT_FAILURE);
         }
         subdir_node->parent = root;
@@ -216,6 +207,22 @@ fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
         _fs_recursive_create_subdirs_tree(disk, subdir_node);
 
         arrpush(root->children, subdir_node);
+    }
+
+    // add files in root
+    for (int i = 0; i < arrlen(root_dir.files); i++) {
+        fs_directory_tree_node_t *file_node = malloc(sizeof(*file_node));
+        if (!file_node) {
+            perror("malloc file node");
+            fs_free_directory(root_dir);
+            exit(EXIT_FAILURE);
+        }
+        file_node->parent = root;
+        file_node->children = NULL;
+        file_node->type = FS_DIRECTORY_TYPE_FILE;
+        file_node->metadata = root_dir.files[i];
+        file_node->depth = 1;
+        arrpush(root->children, file_node);
     }
 
     fs_free_directory(root_dir);
