@@ -118,7 +118,6 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
             }
 
             fs_directory_tree_node_t *target_node = fs_get_node_by_path(disk_tree, src);
-
             if (target_node == NULL) {
                 printf("Caminho '%s' nao encontrado no disco.\n", src);
                 fs_free_disk_tree(disk_tree);
@@ -134,18 +133,18 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
             }
 
             uint16_t *cluster_list = NULL;
-
             if (!fat12_get_table_entry_chain(target_node->metadata.first_cluster, &cluster_list)) {
                 fprintf(stderr, "Nao foi possivel encontrar a lista de clusters de %s\n", target_node->metadata.filename);
                 arrfree(cluster_list);
                 menu_wait_for_any_key();
                 return;
             }
+
+            uint32_t remaining_size = target_node->metadata.file_size;
             for (int i = 0; i < arrlen(cluster_list); i++) {
                 printf("Escrevendo %i/%llu...\n", i + 1, arrlen(cluster_list));
 
                 uint8_t buffer[512];
-
                 if (!fat12_read_data_sector(disk, buffer, cluster_list[i])) {
                     fprintf(stderr, "Erro ao ler o setor de dados do cluster %d\n", cluster_list[i]);
                     arrfree(cluster_list);
@@ -154,14 +153,17 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
                     return;
                 }
 
-                fwrite(buffer, sizeof(buffer), 1, target_file);
+                size_t to_write = (remaining_size > 512) ? 512 : remaining_size;
+                fwrite(buffer, 1, to_write, target_file);
+                remaining_size -= to_write;
+                if (remaining_size == 0) break;  // no more data to write
             }
 
             fclose(target_file);
             fs_free_disk_tree(disk_tree);
+            arrfree(cluster_list);
 
             printf("Arquivo copiado com sucesso para o disco.\n");
-
             break;
         case 1:
             printf("Copiado do disco para o sistema de arquivos.\n");
