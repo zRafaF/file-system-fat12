@@ -10,9 +10,10 @@
 
 #include "defines.h"
 
-#define FAT12_FAT_TABLES_START 1               // FAT12 starts at sector 1
-#define FAT12_NUM_OF_FAT_TABLES_SECTORS 9      // FAT12 can have up to 9 sectors for the FAT table
-#define FAT12_DIRECTORY_ENTRIES_PER_SECTOR 16  // Maximum number of entries 512 / 32 = 16 entries per sector
+#define FAT12_FAT_TABLES_START 1                                                               // FAT12 starts at sector 1
+#define FAT12_NUM_OF_FAT_TABLES_SECTORS 9                                                      // FAT12 can have up to 9 sectors for the FAT table
+#define FAT12_NUM_OF_FAT_TABLES_ENTRIES ((SECTOR_SIZE * FAT12_NUM_OF_FAT_TABLES_SECTORS) / 3)  // Each FAT12 entry is 1.5 bytes, so we divide by 3
+#define FAT12_DIRECTORY_ENTRIES_PER_SECTOR 16                                                  // Maximum number of entries 512 / 32 = 16 entries per sector
 
 #define FAT12_FILE_NAME_LENGTH 8       // Maximum length of a file name in FAT12
 #define FAT12_FILE_EXTENSION_LENGTH 3  // Maximum length of a file extension in FAT12

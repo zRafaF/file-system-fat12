@@ -103,7 +103,7 @@ fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster) {
     return dir;
 }
 
-static void fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_t *dir) {
+static void _fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_t *dir) {
     if (dir->depth >= FS_MAX_DIRECTORY_DEPTH) {
         fprintf(stderr, "Maximum directory depth reached: %llu\n", dir->depth);
         return;  // Prevent infinite recursion
@@ -114,45 +114,88 @@ static void fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_
         return;  // Skip empty or cyclic entries
     }
 
-    // read this directory’s contents
-    fs_directory_t listing = fs_read_directory(disk, dir->metadata.first_cluster);
+    uint16_t *cluster_list = NULL;
 
-    // files
-    for (int i = 0; i < arrlen(listing.files); i++) {
-        fs_directory_tree_node_t *file_node = malloc(sizeof(*file_node));
-        if (!file_node) {
-            perror("malloc file node");
-            exit(EXIT_FAILURE);
+    // Looks on the FAT table for all the clusters that belong to this directory
+    arrpush(cluster_list, dir->metadata.first_cluster);
+
+    size_t number_of_reads = 0;
+
+    while (true) {
+        uint16_t next_cluster = fat12_get_table_entry(cluster_list[arrlen(cluster_list) - 1]);
+        number_of_reads++;
+
+        if (number_of_reads > FAT12_NUM_OF_FAT_TABLES_ENTRIES) {
+            fprintf(stderr, "Too many reads from FAT table, possible infinite loop detected.\n");
+            arrfree(cluster_list);
+            return;  // Prevent infinite loop
         }
-        file_node->parent = dir;
-        file_node->children = NULL;
-        file_node->type = FS_DIRECTORY_TYPE_FILE;
-        file_node->metadata = listing.files[i];
-        file_node->depth = dir->depth + 1;
 
-        arrpush(dir->children, file_node);
+        if (next_cluster >= FAT12_RESERVED_BEGIN && next_cluster <= FAT12_RESERVED_END) {
+            fprintf(stderr, "Invalid cluster encountered: %u\n", next_cluster);
+            arrfree(cluster_list);
+            return;  // Stop on invalid cluster
+        }
+
+        if (next_cluster == FAT12_BAD) {
+            fprintf(stderr, "Bad cluster encountered: %u\n", next_cluster);
+            arrfree(cluster_list);
+            return;  // Stop on bad cluster
+        }
+        if (next_cluster == FAT12_FREE) {
+            fprintf(stderr, "Pointed to free cluster: %u\n", next_cluster);
+            arrfree(cluster_list);
+            return;  // Stop on bad cluster
+        }
+
+        if (next_cluster >= FAT12_EOC_BEGIN && next_cluster <= FAT12_EOC_END) {
+            break;  // End of cluster
+        }
+
+        arrpush(cluster_list, next_cluster);
     }
 
-    // subdirectories
-    for (int i = 0; i < arrlen(listing.subdirs); i++) {
-        fs_directory_tree_node_t *subdir_node = malloc(sizeof(*subdir_node));
-        if (!subdir_node) {
-            perror("malloc subdir node");
-            exit(EXIT_FAILURE);
+    for (int i = 0; i < arrlen(cluster_list); i++) {
+        fs_directory_t listing = fs_read_directory(disk, cluster_list[i]);
+
+        // files
+        for (int i = 0; i < arrlen(listing.files); i++) {
+            fs_directory_tree_node_t *file_node = malloc(sizeof(*file_node));
+            if (!file_node) {
+                perror("malloc file node");
+                exit(EXIT_FAILURE);
+            }
+            file_node->parent = dir;
+            file_node->children = NULL;
+            file_node->type = FS_DIRECTORY_TYPE_FILE;
+            file_node->metadata = listing.files[i];
+            file_node->depth = dir->depth + 1;
+
+            arrpush(dir->children, file_node);
         }
-        subdir_node->parent = dir;
-        subdir_node->children = NULL;
-        subdir_node->type = FS_DIRECTORY_TYPE_SUBDIR;
-        subdir_node->metadata = listing.subdirs[i];
-        subdir_node->depth = dir->depth + 1;
 
-        // recurse
-        fs_recursive_create_subdirs_tree(disk, subdir_node);
+        // subdirectories
+        for (int i = 0; i < arrlen(listing.subdirs); i++) {
+            fs_directory_tree_node_t *subdir_node = malloc(sizeof(*subdir_node));
+            if (!subdir_node) {
+                perror("malloc subdir node");
+                exit(EXIT_FAILURE);
+            }
+            subdir_node->parent = dir;
+            subdir_node->children = NULL;
+            subdir_node->type = FS_DIRECTORY_TYPE_SUBDIR;
+            subdir_node->metadata = listing.subdirs[i];
+            subdir_node->depth = dir->depth + 1;
 
-        arrpush(dir->children, subdir_node);
+            // recurse
+            _fs_recursive_create_subdirs_tree(disk, subdir_node);
+
+            arrpush(dir->children, subdir_node);
+        }
+        fs_free_directory(listing);
     }
 
-    fs_free_directory(listing);
+    arrfree(cluster_list);
 }
 
 fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
@@ -203,7 +246,7 @@ fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
         subdir_node->depth = 1;
 
         // recurse into it
-        fs_recursive_create_subdirs_tree(disk, subdir_node);
+        _fs_recursive_create_subdirs_tree(disk, subdir_node);
 
         arrpush(root->children, subdir_node);
     }
@@ -258,14 +301,12 @@ void fs_free_directory(fs_directory_t dir) {
 void fs_free_disk_tree(fs_directory_tree_node_t *dir_tree) {
     if (!dir_tree) return;
 
-    // First, recursively free all children
+    // Recursively free all children
     for (int i = 0, n = arrlen(dir_tree->children); i < n; i++) {
         fs_free_disk_tree(dir_tree->children[i]);
     }
 
-    // Free the dynamic array of children pointers
+    // Free the dynamic array of children pointers then self
     arrfree(dir_tree->children);
-
-    // Finally, free this node
     free(dir_tree);
 }
