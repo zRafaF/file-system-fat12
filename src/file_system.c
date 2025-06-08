@@ -104,7 +104,7 @@ fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster) {
 
 static void fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_t *dir) {
     if (dir->depth >= FS_MAX_DIRECTORY_DEPTH) {
-        fprintf(stderr, "Maximum directory depth reached: %zu\n", dir->depth);
+        fprintf(stderr, "Maximum directory depth reached: %llu\n", dir->depth);
         return;  // Prevent infinite recursion
     }
 
@@ -212,7 +212,7 @@ fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
 
 void fs_print_directory_tree(fs_directory_tree_node_t *dir_tree) {
     if (!dir_tree) return;
-    for (size_t i = 0; i < arrlen(dir_tree->children); i++) {
+    for (size_t i = 0; i < (size_t)arrlen(dir_tree->children); i++) {
         fs_directory_tree_node_t *child = dir_tree->children[i];
         for (size_t j = 0; j < child->depth; j++)
             printf("  ");

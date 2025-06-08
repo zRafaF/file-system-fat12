@@ -84,14 +84,6 @@ void app_ls1_callback(Menu *m) {
     fs_free_directory(root_dir);
 }
 
-static fs_directory_t *fs_read_subdirectories(FILE *disk, fat12_file_subdir_s *directory, fs_directory_t *subdirs) {
-    for (int i = 0; i < arrlen(directory); i++) {
-        fs_directory_t sub_dir = fs_read_directory(disk, directory[i].first_cluster);
-        arrpush(subdirs, sub_dir);
-    }
-    return subdirs;
-}
-
 // List all files and directories
 void app_ls_callback(Menu *m) {
     UNUSED(m);
