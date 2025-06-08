@@ -132,23 +132,46 @@ void app_debug1_callback(Menu *m) {
 void app_debug2_callback(Menu *m) {
     UNUSED(m);
 
-    fat12_file_subdir_s *dir_entries = NULL;
+    // Testing tree memory leaks
+    // fs_directory_tree_node_t **trees = NULL;
 
-    for (uint8_t i = 0; i < 12; i++) {
-        fat12_file_subdir_s dir_entry = fat12_read_directory_entry(disk, i);
+    // for (size_t i = 0; i < 20000; i++) {
+    //     fs_directory_tree_node_t *tree = fs_create_disk_tree(disk);
+    //     arrpush(trees, tree);
 
-        if (dir_entry.filename[0] != 0x00) {
-            arrpush(dir_entries, dir_entry);
-        }
-    }
+    //     if (i % 1000 == 0) {
+    //         printf("Criada arvore de diretorios %llu\n", i);
+    //     }
+    // }
 
-    for (int i = 0; i < arrlen(dir_entries); i++) {
-        fat12_file_subdir_s dir_entry = dir_entries[i];
-        fat12_print_directory_info(dir_entry);
-    }
+    // printf("Criados %llu arvores de diretorios.\n", arrlen(trees));
+    // getchar();  // Wait for user input before freeing
 
-    arrfree(dir_entries);
+    // for (size_t i = 0; i < arrlen(trees); i++) {
+    //     fs_free_disk_tree(trees[i]);
+    // }
 
-    printf("Listando todos os arquivos e diretorios...\n");
+    // arrfree(trees);
+
+    // printf("Todas as arvores de diretorios foram liberadas.\n");
+
+    // fat12_file_subdir_s *dir_entries = NULL;
+
+    // for (uint8_t i = 0; i < 12; i++) {
+    //     fat12_file_subdir_s dir_entry = fat12_read_directory_entry(disk, i);
+
+    //     if (dir_entry.filename[0] != 0x00) {
+    //         arrpush(dir_entries, dir_entry);
+    //     }
+    // }
+
+    // for (int i = 0; i < arrlen(dir_entries); i++) {
+    //     fat12_file_subdir_s dir_entry = dir_entries[i];
+    //     fat12_print_directory_info(dir_entry);
+    // }
+
+    // arrfree(dir_entries);
+
+    // printf("Listando todos os arquivos e diretorios...\n");
 }
 #endif
