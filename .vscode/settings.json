@@ -38,7 +38,8 @@
         "stddef.h": "c",
         "cli_menu.h": "c",
         "app.h": "c",
-        "file_system.h": "c"
+        "file_system.h": "c",
+        "fat12_helpers.h": "c"
     },
     "makefile.configureOnOpen": true,
     "cSpell.words": [

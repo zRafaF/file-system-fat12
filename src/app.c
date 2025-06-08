@@ -76,8 +76,6 @@ void app_ls1_callback(Menu *m) {
         fs_print_file_leaf(subdir, 0);
     }
 
-    printf("----------------------------------------------------------------------------------------------\n");
-
     for (int i = 0; i < arrlen(root_dir.files); i++) {
         fat12_file_subdir_s file = root_dir.files[i];
         fs_print_file_leaf(file, 0);

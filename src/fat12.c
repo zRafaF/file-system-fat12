@@ -4,6 +4,14 @@ static bool has_loaded_fat_table = false;
 
 static uint8_t fat_table[SECTOR_SIZE * 9];  // FAT12 can have up to 9 sectors for the FAT table
 
+static void fat12_reset_file_seek(FILE *disk) {
+    assert(disk != NULL);
+    if (fseek(disk, 0, SEEK_SET) != 0) {
+        perror("Failed to reset file seek");
+        exit(EXIT_FAILURE);
+    }
+}
+
 fat12_time_s fat12_extract_time(uint16_t time) {
     // Extraído de https://fileadmin.cs.lth.se/cs/Education/EDA385/HT09/student_doc/FinalReports/FAT12_overview.pdf
 
@@ -26,6 +34,7 @@ fat12_date_s fat12_extract_date(uint16_t date) {
 
 fat12_boot_sector_s fat12_read_boot_sector(FILE *disk) {
     assert(disk != NULL);
+    fat12_reset_file_seek(disk);
 
     fat12_boot_sector_s boot_sector;
 
@@ -42,6 +51,7 @@ fat12_boot_sector_s fat12_read_boot_sector(FILE *disk) {
 fat12_file_subdir_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx) {
     assert(disk != NULL);
     assert(entry_idx < (FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS * FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR));
+    fat12_reset_file_seek(disk);
 
     fat12_file_subdir_s dir_entry;
 
@@ -140,18 +150,13 @@ void fat12_print_directory_info(fat12_file_subdir_s dir) {
 uint8_t *fat12_read_cluster(FILE *disk, uint8_t *buffer, uint16_t cluster_number) {
     assert(disk != NULL);
     assert(buffer != NULL);
+    fat12_reset_file_seek(disk);
 
     // Calculate the offset for the cluster
     uint64_t offset = cluster_number * SECTOR_SIZE;
 
-    // Move the file pointer to the correct position
-    if (fseek(disk, offset, SEEK_SET) != 0) {
-        perror("Failed to seek to cluster position");
-        return NULL;
-    }
-
     // Read the cluster data into the buffer
-    size_t bytes_read = fread(buffer, sizeof(uint8_t), SECTOR_SIZE, disk);
+    size_t bytes_read = fread(buffer, sizeof(uint8_t), offset, disk);
     if (bytes_read != SECTOR_SIZE) {
         perror("Failed to read cluster data");
         return NULL;
@@ -162,6 +167,7 @@ uint8_t *fat12_read_cluster(FILE *disk, uint8_t *buffer, uint16_t cluster_number
 
 uint8_t *fat12_load_full_fat_table(FILE *disk) {
     assert(disk != NULL);
+    fat12_reset_file_seek(disk);
 
     // Move to the start of the FAT table
     if (fseek(disk, SECTOR_SIZE * FAT12_FAT_TABLES_START, SEEK_SET) != 0) {

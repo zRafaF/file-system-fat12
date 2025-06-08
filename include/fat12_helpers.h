@@ -3,7 +3,7 @@
 
 #include "fat12.h"
 
-#define F12H_FORMATTED_DATE_TIME_BUFFER_SIZE 23
+#define F12H_FORMATTED_DATE_TIME_BUFFER_SIZE 29
 
 char* f12h_format_filename(fat12_file_subdir_s dir, char* buffer);
 
