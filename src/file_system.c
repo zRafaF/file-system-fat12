@@ -108,6 +108,11 @@ static void fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_
         return;  // Prevent infinite recursion
     }
 
+    if (dir->metadata.first_cluster < FAT12_DATA_AREA_NUMBER_OFFSET ||
+        dir->metadata.first_cluster == dir->parent->metadata.first_cluster) {
+        return;  // Skip empty or cyclic entries
+    }
+
     // read this directory’s contents
     fs_directory_t listing = fs_read_directory(disk, dir->metadata.first_cluster);
 
@@ -123,7 +128,6 @@ static void fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_
         file_node->type = FS_DIRECTORY_TYPE_FILE;
         file_node->metadata = listing.files[i];
         file_node->depth = dir->depth + 1;
-        printf("Adding file: %s\n", listing.files[i].filename);
 
         arrpush(dir->children, file_node);
     }
@@ -140,8 +144,6 @@ static void fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_
         subdir_node->type = FS_DIRECTORY_TYPE_SUBDIR;
         subdir_node->metadata = listing.subdirs[i];
         subdir_node->depth = dir->depth + 1;
-
-        printf("Adding subdirectory: %s/\n", listing.subdirs[i].filename);
 
         // recurse
         fs_recursive_create_subdirs_tree(disk, subdir_node);
@@ -183,7 +185,6 @@ fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
         file_node->metadata = root_dir.files[i];
         file_node->depth = 1;
         arrpush(root->children, file_node);
-        printf("Adding file: %s\n", root_dir.files[i].filename);
     }
 
     // add subdirectories in root
@@ -199,7 +200,6 @@ fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
         subdir_node->metadata = root_dir.subdirs[i];
         subdir_node->depth = 1;
 
-        printf("Adding subdirectory: %s/\n", root_dir.subdirs[i].filename);
         // recurse into it
         fs_recursive_create_subdirs_tree(disk, subdir_node);
 
