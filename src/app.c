@@ -12,7 +12,7 @@ void app_mount_callback(Menu *m) {
     } else {
         switch (m->selected_index) {
             case 0:
-                disk = fopen(PATH_FAT12_IMG, "rb");
+                disk = fopen(PATH_FAT12_IMG, "r+b");
                 if (disk == NULL) {
                     perror("Failed to open disk image");
                     exit(EXIT_FAILURE);
@@ -21,7 +21,7 @@ void app_mount_callback(Menu *m) {
                 printf("Imagem montada com sucesso em \'/\'.\n");
                 break;
             case 1:
-                disk = fopen(PATH_FAT12SUBDIR_IMG, "rb");
+                disk = fopen(PATH_FAT12SUBDIR_IMG, "r+b");
                 if (disk == NULL) {
                     perror("Failed to open disk image");
                     exit(EXIT_FAILURE);
@@ -186,13 +186,27 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
             return false;
         }
 
+        uint8_t read_buffer[SECTOR_SIZE] = {0};
+        fat12_read_data_sector(disk, read_buffer, table_entry);
+        printf("Lendo setor de dados do cluster %d...\n", table_entry);
+        bo_print_buffer(read_buffer, SECTOR_SIZE);
+
+        if (fat12_write_data_sector(disk, buffer, table_entry) == false) {
+            fprintf(stderr, "Erro ao escrever no setor de dados do cluster %d\n", table_entry);
+            fclose(source_file);
+            arrfree(cluster_list);
+            return false;
+        }
+
+        printf("%lu bytes escritos no cluster %u...\n", bytes_read, table_entry);
+
+        fat12_read_data_sector(disk, read_buffer, table_entry);
+        bo_print_buffer(read_buffer, SECTOR_SIZE);
+
         // Add the entry to the cluster list
         arrpush(cluster_list, table_entry);
-
         total_bytes += bytes_read;
         nex_entry_idx = table_entry + 1;
-
-        printf("Escrevendo %d bytes no cluster %d...\n", bytes_read, table_entry);
     }
 
     fclose(source_file);

@@ -111,6 +111,7 @@ void fat12_print_boot_sector_info(fat12_boot_sector_s bs);
 void fat12_print_directory_info(fat12_file_subdir_s dir);
 
 uint8_t *fat12_read_data_sector(FILE *disk, uint8_t *buffer, uint16_t sector_number);
+bool fat12_write_data_sector(FILE *disk, uint8_t *buffer, uint16_t sector_number);
 
 uint8_t *fat12_load_full_fat_table(FILE *disk);
 

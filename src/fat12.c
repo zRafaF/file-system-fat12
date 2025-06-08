@@ -199,6 +199,29 @@ uint8_t *fat12_read_data_sector(FILE *disk, uint8_t *buffer, uint16_t sector_num
     return buffer;
 }
 
+bool fat12_write_data_sector(FILE *disk, uint8_t *buffer, uint16_t sector_number) {
+    assert(disk != NULL);
+    assert(buffer != NULL);
+    assert(sector_number < FAT12_MAX_CLUSTER_NUMBER);
+    fat12_reset_file_seek(disk);
+
+    // Calculate the offset for the cluster
+    uint64_t offset = (FAT12_DATA_AREA_START + (sector_number - FAT12_DATA_AREA_NUMBER_OFFSET)) * SECTOR_SIZE;
+
+    if (fseek(disk, offset, SEEK_SET) != 0) {
+        perror("Failed to seek to cluster position");
+        return false;
+    }
+
+    size_t bytes_written = fwrite(buffer, sizeof(uint8_t), SECTOR_SIZE, disk);
+    if (bytes_written != SECTOR_SIZE) {
+        perror("Failed to write cluster data");
+        return false;
+    }
+
+    return true;
+}
+
 uint8_t *fat12_load_full_fat_table(FILE *disk) {
     assert(disk != NULL);
     fat12_reset_file_seek(disk);
