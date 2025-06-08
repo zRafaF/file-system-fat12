@@ -50,14 +50,14 @@ fat12_boot_sector_s fat12_read_boot_sector(FILE *disk) {
 
 fat12_file_subdir_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx) {
     assert(disk != NULL);
-    assert(entry_idx < (FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS * FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR));
+    assert(entry_idx < (FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS * FAT12_DIRECTORY_ENTRIES_PER_SECTOR));
     fat12_reset_file_seek(disk);
 
     fat12_file_subdir_s dir_entry;
 
     // Calculate the sector where the directory entry is located
-    uint16_t sector_idx = FAT12_ROOT_DIRECTORY_START + (entry_idx / FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR);
-    uint16_t entry_offset = entry_idx % FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR;
+    uint16_t sector_idx = FAT12_ROOT_DIRECTORY_START + (entry_idx / FAT12_DIRECTORY_ENTRIES_PER_SECTOR);
+    uint16_t entry_offset = entry_idx % FAT12_DIRECTORY_ENTRIES_PER_SECTOR;
 
     // Move to the position of the directory entry
     if (fseek(disk, sector_idx * SECTOR_SIZE + entry_offset * sizeof(fat12_file_subdir_s), SEEK_SET) != 0) {
@@ -74,6 +74,33 @@ fat12_file_subdir_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx) {
 
     return dir_entry;
 }
+
+fat12_file_subdir_s fat12_read_directory_from_data_area(FILE *disk, uint16_t cluster, uint8_t idx) {
+    assert(disk != NULL);
+    assert(cluster < FAT12_MAX_CLUSTER_NUMBER);
+    assert(idx < FAT12_DIRECTORY_ENTRIES_PER_SECTOR);
+    fat12_reset_file_seek(disk);
+
+    fat12_file_subdir_s dir_entry;
+
+    const uint64_t offset = ((FAT12_DATA_AREA_START + (cluster - FAT12_DATA_AREA_NUMBER_OFFSET)) * SECTOR_SIZE) + (idx * sizeof(fat12_file_subdir_s));
+
+    // Move to the start of the directory sector
+    if (fseek(disk, offset, SEEK_SET) != 0) {
+        perror("Failed to seek to directory sector position");
+        exit(EXIT_FAILURE);
+    }
+
+    // Read the directory entry into the structure
+    size_t bytes_read = fread(&dir_entry, sizeof(fat12_file_subdir_s), 1, disk);
+    if (bytes_read != 1) {
+        perror("Failed to read directory entry from sector");
+        exit(EXIT_FAILURE);
+    }
+
+    return dir_entry;
+}
+
 char *fat12_attribute_to_string(uint8_t attribute) {
     switch (attribute) {
         case FAT12_ATTR_NONE:
@@ -147,16 +174,21 @@ void fat12_print_directory_info(fat12_file_subdir_s dir) {
 }
 
 // Reads a cluster from a FAT12 disk image and overwrites the provided buffer with the cluster data.
-uint8_t *fat12_read_cluster(FILE *disk, uint8_t *buffer, uint16_t cluster_number) {
+uint8_t *fat12_read_data_sector(FILE *disk, uint8_t *buffer, uint16_t sector_number) {
     assert(disk != NULL);
     assert(buffer != NULL);
+    assert(sector_number < FAT12_MAX_CLUSTER_NUMBER);
     fat12_reset_file_seek(disk);
 
     // Calculate the offset for the cluster
-    uint64_t offset = cluster_number * SECTOR_SIZE;
+    uint64_t offset = (FAT12_DATA_AREA_START + (sector_number - FAT12_DATA_AREA_NUMBER_OFFSET)) * SECTOR_SIZE;
 
-    // Read the cluster data into the buffer
-    size_t bytes_read = fread(buffer, sizeof(uint8_t), offset, disk);
+    if (fseek(disk, offset, SEEK_SET) != 0) {
+        perror("Failed to seek to cluster position");
+        return NULL;
+    }
+
+    size_t bytes_read = fread(buffer, sizeof(uint8_t), SECTOR_SIZE, disk);
     if (bytes_read != SECTOR_SIZE) {
         perror("Failed to read cluster data");
         return NULL;

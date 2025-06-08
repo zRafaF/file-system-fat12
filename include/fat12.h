@@ -10,13 +10,19 @@
 
 #include "defines.h"
 
-#define FAT12_FAT_TABLES_START 1           // FAT12 starts at sector 1
-#define FAT12_NUM_OF_FAT_TABLES_SECTORS 9  // FAT12 can have up to 9 sectors for the FAT table
+#define FAT12_FAT_TABLES_START 1               // FAT12 starts at sector 1
+#define FAT12_NUM_OF_FAT_TABLES_SECTORS 9      // FAT12 can have up to 9 sectors for the FAT table
+#define FAT12_DIRECTORY_ENTRIES_PER_SECTOR 16  // Maximum number of entries 512 / 32 = 16 entries per sector
 
-#define FAT12_ROOT_DIRECTORY_START 19                                                                              // Root directory starts at cluster 19 for FAT12
-#define FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS 14                                                                     // FAT12 root directory can occupy up to 14 sectors
-#define FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR 16                                                                 // Maximum number of entries 512 / 32 = 16 entries per sector
-#define FAT12_ROOT_DIRECTORY_ENTRIES FAT12_ROOT_DIRECTORY_ENTRIES_PER_SECTOR *FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS  // Total number of entries in the root directory
+#define FAT12_ROOT_DIRECTORY_START 19                                                                         // Root directory starts at cluster 19 for FAT12
+#define FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS 14                                                                // FAT12 root directory can occupy up to 14 sectors
+#define FAT12_ROOT_DIRECTORY_ENTRIES FAT12_DIRECTORY_ENTRIES_PER_SECTOR *FAT12_NUM_OF_ROOT_DIRECTORY_SECTORS  // Total number of entries in the root directory
+
+// FAT12 data area
+#define FAT12_DATA_AREA_START 33
+#define FAT12_DATA_AREA_END 2879
+#define FAT12_MAX_CLUSTER_NUMBER FAT12_DATA_AREA_END - FAT12_DATA_AREA_START
+#define FAT12_DATA_AREA_NUMBER_OFFSET 2
 
 // FAT12 entries code map
 #define FAT12_FREE (0x000)            // Free cluster marker
@@ -93,11 +99,12 @@ fat12_date_s fat12_extract_date(uint16_t date);
 
 fat12_boot_sector_s fat12_read_boot_sector(FILE *disk);
 fat12_file_subdir_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx);
+fat12_file_subdir_s fat12_read_directory_from_data_area(FILE *disk, uint16_t cluster, uint8_t idx);
 
 void fat12_print_boot_sector_info(fat12_boot_sector_s bs);
 void fat12_print_directory_info(fat12_file_subdir_s dir);
 
-uint8_t *fat12_read_cluster(FILE *disk, uint8_t *buffer, uint16_t cluster_number);
+uint8_t *fat12_read_data_sector(FILE *disk, uint8_t *buffer, uint16_t sector_number);
 
 uint8_t *fat12_load_full_fat_table(FILE *disk);
 

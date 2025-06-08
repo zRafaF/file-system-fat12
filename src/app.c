@@ -118,3 +118,21 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
     printf("  Destino: %s\n", dst);
     menu_wait_for_any_key();
 }
+
+void app_debug_callback(Menu *m) {
+    UNUSED(m);
+    printf("Debugging information:\n");
+
+    uint8_t buffer[SECTOR_SIZE];
+
+    fat12_read_data_sector(disk, buffer, 14);
+
+    bo_print_buffer(buffer, SECTOR_SIZE);
+
+    for (int i = 0; i < FAT12_DIRECTORY_ENTRIES_PER_SECTOR; i++) {
+        fat12_file_subdir_s dir_entry = fat12_read_directory_from_data_area(disk, 14, i);
+        printf("Entry %d: ", i);
+        fat12_print_directory_info(dir_entry);
+    }
+    printf("\n");
+}

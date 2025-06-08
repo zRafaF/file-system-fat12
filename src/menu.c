@@ -114,6 +114,7 @@ void init_menus(Menu* unmounted_menu, Menu* mounted_menu) {
     menu_add_item(unmounted_menu, "Sair", quit_callback);
 
     // Mounted menu setup
+    menu_add_item(mounted_menu, "Debug", app_debug_callback);
     menu_add_item(mounted_menu, "Info Boot Sector", app_boot_sector_callback);
     menu_add_item(mounted_menu, "ls-1 (Listar diretorio raiz)", app_ls1_callback);
     menu_add_item(mounted_menu, "ls   (Listar todos arquivos e diretorios)", app_ls_callback);
