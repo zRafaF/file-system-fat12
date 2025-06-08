@@ -170,8 +170,16 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
     uint16_t *cluster_list = NULL;
 
     if (!fs_write_file_to_data_area(source_file, disk, &cluster_list)) {
-        fprintf(stderr, "Erro ao escrever o arquivo no disco.\n");
+        fprintf(stderr, "Erro ao escrever o arquivo na area de dados.\n");
         fclose(source_file);
+        arrfree(cluster_list);
+        return false;
+    }
+
+    if (!fs_write_cluster_chain_to_fat_table(disk, cluster_list)) {
+        fprintf(stderr, "Erro ao escrever a cadeia de clusters na tabela FAT.\n");
+        fclose(source_file);
+        arrfree(cluster_list);
         return false;
     }
 

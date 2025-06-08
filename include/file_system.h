@@ -66,4 +66,6 @@ fs_fat_compatible_filename_t fs_get_filename_from_path(const char *path);
 // Returns the total size of the file system in bytes. Returns 0 on error.
 uint32_t fs_write_file_to_data_area(FILE *source_file, FILE *disk, uint16_t **cluster_list);
 
+bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list);
+
 #endif  // FILE_SYSTEM_H

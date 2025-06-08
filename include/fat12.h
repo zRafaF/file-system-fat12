@@ -116,6 +116,7 @@ bool fat12_write_data_sector(FILE *disk, uint8_t *buffer, uint16_t sector_number
 uint8_t *fat12_load_full_fat_table(FILE *disk);
 
 uint16_t fat12_get_table_entry(uint16_t entry_idx);
+bool fat12_set_table_entry(uint16_t entry_idx, uint16_t value);
 
 uint16_t fat12_find_next_free_entry(uint16_t start_idx);
 

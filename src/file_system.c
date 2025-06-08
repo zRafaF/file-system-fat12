@@ -396,3 +396,26 @@ uint32_t fs_write_file_to_data_area(FILE *source_file, FILE *disk, uint16_t **cl
 
     return total_bytes;  // Return the total number of bytes written
 }
+
+bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list) {
+    for (int i = 0; i < 20; i++) {
+        uint16_t entry = fat12_get_table_entry(i);
+        printf("FAT entry %d: %x\n", i, entry);
+    }
+
+    for (int i = 0; i < arrlen(cluster_list); i++) {
+        uint16_t entry = cluster_list[i];
+        uint16_t next_entry = (i < ((int)arrlen(cluster_list)) - 1) ? cluster_list[i + 1] : FAT12_EOC_END;
+        if (!fat12_set_table_entry(entry, next_entry)) {
+            fprintf(stderr, "Erro ao escrever a entrada %d na tabela FAT: %x\n", i, entry);
+            return false;
+        }
+    }
+
+    for (int i = 0; i < 20; i++) {
+        uint16_t entry = fat12_get_table_entry(i);
+        printf("FAT entry %d: %x\n", i, entry);
+    }
+
+    return true;  // Return true if all entries were written successfully
+}

@@ -274,6 +274,29 @@ uint16_t fat12_get_table_entry(uint16_t entry_idx) {
     return value;
 }
 
+bool fat12_set_table_entry(uint16_t entry_idx, uint16_t value) {
+    assert(has_loaded_fat_table);
+    assert(entry_idx < 0xFFF);
+    assert(fat_table != NULL);
+
+    // Compute byte offset = floor(entry_idx * 1.5)
+    uint32_t byte_offset = (entry_idx * 3) / 2;
+
+    if ((entry_idx % 2) == 0) {
+        // If entry_idx is even, the first byte contains the low 8 bits
+        // and the second byte contains the high 4 bits.
+        fat_table[byte_offset] = value & 0xFF;             // Low byte
+        fat_table[byte_offset + 1] = (value >> 8) & 0x0F;  // High nibble
+    } else {
+        // If entry_idx is odd, the first byte contains the low 4 bits
+        // and the second byte contains the high 8 bits.
+        fat_table[byte_offset] = (value & 0x0F) << 4;  // High nibble
+        fat_table[byte_offset + 1] = value >> 4;       // High byte
+    }
+
+    return true;
+}
+
 uint16_t fat12_find_next_free_entry(uint16_t start_idx) {
     assert(has_loaded_fat_table);
     assert(fat_table != NULL);
