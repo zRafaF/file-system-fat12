@@ -75,6 +75,33 @@ fs_directory_t fs_read_root_directory(FILE *disk) {
     return dir;
 }
 
+fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster) {
+    fat12_file_subdir_s *dir_entries = NULL;
+
+    for (uint8_t i = 0; i < FAT12_DIRECTORY_ENTRIES_PER_SECTOR; i++) {
+        fat12_file_subdir_s dir_entry = fat12_read_directory_from_data_area(disk, cluster, i);
+
+        if (dir_entry.filename[0] != 0x00) {
+            arrpush(dir_entries, dir_entry);
+        }
+    }
+
+    fat12_file_subdir_s *files = NULL;
+    fat12_file_subdir_s *subdirs = NULL;
+
+    for (int i = 0; i < arrlen(dir_entries); i++) {
+        if (dir_entries[i].attributes & FAT12_ATTR_DIRECTORY) {
+            arrpush(subdirs, dir_entries[i]);
+        } else if (dir_entries[i].extension[0] != 0x00 || dir_entries[i].filename[0] != 0x00) {
+            arrpush(files, dir_entries[i]);
+        }
+    }
+
+    arrfree(dir_entries);
+    fs_directory_t dir = {.files = files, .subdirs = subdirs};
+    return dir;
+}
+
 void fs_free_directory(fs_directory_t dir) {
     arrfree(dir.files);
     arrfree(dir.subdirs);

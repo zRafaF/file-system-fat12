@@ -123,16 +123,22 @@ void app_debug_callback(Menu *m) {
     UNUSED(m);
     printf("Debugging information:\n");
 
-    uint8_t buffer[SECTOR_SIZE];
+    fs_directory_t sub_dir = fs_read_directory(disk, 6);
 
-    fat12_read_data_sector(disk, buffer, 14);
-
-    bo_print_buffer(buffer, SECTOR_SIZE);
-
-    for (int i = 0; i < FAT12_DIRECTORY_ENTRIES_PER_SECTOR; i++) {
-        fat12_file_subdir_s dir_entry = fat12_read_directory_from_data_area(disk, 14, i);
-        printf("Entry %d: ", i);
-        fat12_print_directory_info(dir_entry);
+    printf("Subdirectory contents:\n");
+    fs_print_ls_directory_header();
+    printf("----------------------------------------------------------------------------------------------\n");
+    for (int i = 0; i < arrlen(sub_dir.subdirs); i++) {
+        fat12_file_subdir_s subdir = sub_dir.subdirs[i];
+        fs_print_file_leaf(subdir, 0);
     }
+
+    for (int i = 0; i < arrlen(sub_dir.files); i++) {
+        fat12_file_subdir_s file = sub_dir.files[i];
+        fs_print_file_leaf(file, 0);
+    }
+
+    fs_free_directory(sub_dir);
+
     printf("\n");
 }

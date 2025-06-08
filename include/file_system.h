@@ -20,6 +20,8 @@ void fs_print_file_leaf(fat12_file_subdir_s dir, uint8_t depth);
 // WARNING: The returned pointer must be freed after use to avoid memory leaks (arrfree()).
 fs_directory_t fs_read_root_directory(FILE *disk);
 
+fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster);
+
 // Frees the memory allocated for a fs_directory_t structure
 void fs_free_directory(fs_directory_t dir);
 
