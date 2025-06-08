@@ -117,7 +117,8 @@ void init_menus(Menu* unmounted_menu, Menu* mounted_menu) {
     menu_add_item(mounted_menu, "Info Boot Sector", app_boot_sector_callback);
     menu_add_item(mounted_menu, "ls-1 (Listar diretorio raiz)", app_ls1_callback);
     menu_add_item(mounted_menu, "ls   (Listar todos arquivos e diretorios)", app_ls_callback);
-    menu_add_item(mounted_menu, "rm   (Remover arquivo ou diretorio)", app_rm_callback);
+    menu_add_input(mounted_menu, "rm   (Remover arquivo ou diretorio) ", app_rm_callback);
+
     setup_copy_flow(mounted_menu);
     menu_add_item(mounted_menu, "Desmontar Imagem", app_unmount_callback);
     menu_add_item(mounted_menu, "Sair", quit_callback);

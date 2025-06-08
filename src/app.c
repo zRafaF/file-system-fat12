@@ -64,8 +64,8 @@ void app_ls1_callback(Menu *m) {
 
     fs_directory_t root_dir = fs_read_root_directory(disk);
 
-    printf("\n===== LISTANDO ARQUIVOS E DIRETORIOS =====\n");
-    printf("------------------------------------------\n");
+    printf("\n=======  LISTANDO DIRETORIO RAIZ  =======\n");
+    printf("-----------------------------------------\n");
 
     fs_print_ls_directory_header();
 
@@ -106,9 +106,9 @@ void app_ls_callback(Menu *m) {
 
     printf("Listando todos os arquivos e diretorios...\n");
 }
-void app_rm_callback(Menu *m) {
+void app_rm_callback(Menu *m, const char *input) {
     UNUSED(m);
-    printf("Removendo arquivo ou diretorio...\n");
+    printf("Removendo arquivo ou diretorio: %s\n", input);
 }
 
 void app_copy_complete(int copy_type, const char *src, const char *dst) {
