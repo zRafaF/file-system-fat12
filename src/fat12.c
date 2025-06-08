@@ -257,8 +257,9 @@ bool fat12_get_table_entry_chain(uint16_t first_entry, uint16_t **chain) {
     arrpush(*chain, first_entry);
     size_t number_of_reads = 0;
 
+    uint16_t current_entry = *chain[arrlen(*chain) - 1];
     while (true) {
-        uint16_t next_entry = fat12_get_table_entry(*chain[arrlen(*chain) - 1]);
+        uint16_t next_entry = fat12_get_table_entry(current_entry);
         number_of_reads++;
 
         if (number_of_reads > FAT12_NUM_OF_FAT_TABLES_ENTRIES) {
@@ -267,16 +268,16 @@ bool fat12_get_table_entry_chain(uint16_t first_entry, uint16_t **chain) {
         }
 
         if (next_entry >= FAT12_RESERVED_BEGIN && next_entry <= FAT12_RESERVED_END) {
-            fprintf(stderr, "Invalid cluster encountered: %u\n", next_entry);
+            fprintf(stderr, "Invalid cluster encountered: %x\n", next_entry);
             return false;  // Stop on invalid cluster
         }
 
         if (next_entry == FAT12_BAD) {
-            fprintf(stderr, "Bad cluster encountered: %u\n", next_entry);
+            fprintf(stderr, "Bad cluster encountered: %x\n", next_entry);
             return false;  // Stop on bad cluster
         }
         if (next_entry == FAT12_FREE) {
-            fprintf(stderr, "Pointed to free cluster: %u\n", next_entry);
+            fprintf(stderr, "Pointed to free cluster: %x\n", next_entry);
             return false;  // Stop on bad cluster
         }
 
@@ -284,6 +285,7 @@ bool fat12_get_table_entry_chain(uint16_t first_entry, uint16_t **chain) {
             break;  // End of cluster
         }
 
+        current_entry = next_entry;
         arrpush(*chain, next_entry);
     }
 

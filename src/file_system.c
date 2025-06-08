@@ -229,6 +229,49 @@ fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk) {
     return root;
 }
 
+fs_directory_tree_node_t *fs_get_node_by_path(fs_directory_tree_node_t *root, const char *path) {
+    if (!root || !path || path[0] != '/') {
+        return NULL;  // Invalid input
+    }
+
+    // Split the path into components
+    char *path_copy = strdup(path);
+    if (!path_copy) {
+        perror("strdup path");
+        return NULL;
+    }
+
+    char *token = strtok(path_copy, "/");
+    fs_directory_tree_node_t *current_node = root;
+
+    while (token) {
+        bool found = false;
+
+        // Search for the next component in the current node's children
+        for (int i = 0; i < arrlen(current_node->children); i++) {
+            fs_directory_tree_node_t *child = current_node->children[i];
+            char name[FS_MAX_FILENAME_LENGTH];
+            f12h_format_filename(child->metadata, name);
+
+            if (strcmp(name, token) == 0) {
+                current_node = child;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            free(path_copy);
+            return NULL;  // Component not found
+        }
+
+        token = strtok(NULL, "/");  // Get the next component
+    }
+
+    free(path_copy);
+    return current_node;  // Return the found node
+}
+
 static void _fs_print_tree_ascii(
     fs_directory_tree_node_t *node,
     const char *prefix,

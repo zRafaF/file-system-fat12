@@ -99,42 +99,92 @@ void app_rm_callback(Menu *m, const char *input) {
 }
 
 void app_copy_complete(int copy_type, const char *src, const char *dst) {
-    printf("\nOperacao completa:\n");
-    printf("  Tipo: %s\n", (copy_type ? "Disco -> Sistema" : "Sistema -> Disco"));
-    printf("  Origem: %s\n", src);
-    printf("  Destino: %s\n", dst);
+    printf("\n=======  REALIZANDO COPIA DE ARQUIVOS  =======\n");
+    printf("----------------------------------------------\n");
+    printf("- Tipo: %s\n", (copy_type ? "Disco -> Sistema" : "Sistema -> Disco"));
+    printf("- Origem: %s\n", src);
+    printf("- Destino: %s\n", dst);
+    printf("----------------------------------------------\n");
+
+    switch (copy_type) {
+        case 0:
+            printf("Copiando do sistema de arquivos para o disco.\n");
+
+            fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
+            if (disk_tree == NULL) {
+                printf("Erro ao criar a arvore de diretorios do disco.\n");
+                menu_wait_for_any_key();
+                return;
+            }
+
+            fs_directory_tree_node_t *target_node = fs_get_node_by_path(disk_tree, src);
+
+            if (target_node == NULL) {
+                printf("Caminho '%s' nao encontrado no disco.\n", src);
+                fs_free_disk_tree(disk_tree);
+                menu_wait_for_any_key();
+                return;
+            }
+
+            FILE *target_file = fopen(dst, "w");
+            if (target_file == NULL) {
+                perror("Erro ao abrir o arquivo de destino");
+                menu_wait_for_any_key();
+                return;
+            }
+
+            uint16_t *cluster_list = NULL;
+
+            if (!fat12_get_table_entry_chain(target_node->metadata.first_cluster, &cluster_list)) {
+                fprintf(stderr, "Nao foi possivel encontrar a lista de clusters de %s\n", target_node->metadata.filename);
+                arrfree(cluster_list);
+                menu_wait_for_any_key();
+                return;
+            }
+            for (int i = 0; i < arrlen(cluster_list); i++) {
+                printf("Escrevendo %i/%llu...\n", i + 1, arrlen(cluster_list));
+
+                uint8_t buffer[512];
+
+                if (!fat12_read_data_sector(disk, buffer, cluster_list[i])) {
+                    fprintf(stderr, "Erro ao ler o setor de dados do cluster %d\n", cluster_list[i]);
+                    arrfree(cluster_list);
+                    fs_free_disk_tree(disk_tree);
+                    menu_wait_for_any_key();
+                    return;
+                }
+
+                fwrite(buffer, sizeof(buffer), 1, target_file);
+            }
+
+            fclose(target_file);
+            fs_free_disk_tree(disk_tree);
+
+            printf("Arquivo copiado com sucesso para o disco.\n");
+
+            break;
+        case 1:
+            printf("Copiado do disco para o sistema de arquivos.\n");
+            break;
+        default:
+            printf("Tipo de copia desconhecido.\n");
+            break;
+    }
+
     menu_wait_for_any_key();
 }
 
 #ifdef DEBUG
 void app_debug1_callback(Menu *m) {
     UNUSED(m);
-
-    fs_directory_t sub_dir = fs_read_directory(disk, 6);
-
-    printf("Subdirectory contents:\n");
-    fs_print_ls_directory_header();
-    printf("----------------------------------------------------------------------------------------------\n");
-    for (int i = 0; i < arrlen(sub_dir.subdirs); i++) {
-        fat12_file_subdir_s subdir = sub_dir.subdirs[i];
-        fs_print_file_leaf(subdir, 0);
-        fat12_print_directory_info(subdir);
-    }
-
-    for (int i = 0; i < arrlen(sub_dir.files); i++) {
-        fat12_file_subdir_s file = sub_dir.files[i];
-        fs_print_file_leaf(file, 0);
-    }
-
-    fs_free_directory(sub_dir);
-}
-
-void app_debug2_callback(Menu *m) {
-    UNUSED(m);
-
     for (int i = 0; i < 20; i++) {
         uint16_t entry = fat12_get_table_entry(i);
         printf("FAT entry %d: %x\n", i, entry);
     }
+}
+
+void app_debug2_callback(Menu *m) {
+    UNUSED(m);
+    app_copy_complete(0, "/ARQ.TXT", "./teste.txt");
 }
 #endif

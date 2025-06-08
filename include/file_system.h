@@ -44,6 +44,10 @@ fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster);
 // WARNING: The returned pointer must be freed after use to avoid memory leaks (fs_free_disk_tree()).
 fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk);
 
+// Finds a node in the directory tree by its path.
+// Returns a pointer to the node if found, or NULL if not found.
+fs_directory_tree_node_t *fs_get_node_by_path(fs_directory_tree_node_t *root, const char *path);
+
 void fs_print_directory_tree(fs_directory_tree_node_t *dir_tree);
 
 // Frees the memory allocated for a fs_directory_t structure
