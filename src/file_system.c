@@ -105,7 +105,7 @@ fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster) {
 
 static void _fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_t *dir) {
     if (dir->depth >= FS_MAX_DIRECTORY_DEPTH) {
-        fprintf(stderr, "Maximum directory depth reached: %lu\n", dir->depth);
+        fprintf(stderr, "Maximum directory depth reached: %llu\n", dir->depth);
         return;  // Prevent infinite recursion
     }
 
@@ -355,4 +355,44 @@ fs_fat_compatible_filename_t fs_get_filename_from_path(const char *path) {
     }
 
     return filename;
+}
+
+uint32_t fs_write_file_to_data_area(FILE *source_file, FILE *disk, uint16_t **cluster_list) {
+    uint8_t buffer[SECTOR_SIZE] = {0};
+
+    size_t bytes_read = 0;
+    uint32_t total_bytes = 0;
+    uint16_t nex_entry_idx = 0;
+
+    while ((bytes_read = fread(buffer, 1, SECTOR_SIZE, source_file)) > 0) {
+        // Find the next free entry in the FAT table
+        uint16_t table_entry = fat12_find_next_free_entry(nex_entry_idx);
+        if (table_entry < FAT12_FAT_TABLES_RESERVED_ENTRIES) {
+            fprintf(stderr, "Nao ha entradas livres na tabela FAT.\n");
+            return 0;
+        }
+
+        uint8_t read_buffer[SECTOR_SIZE] = {0};
+        fat12_read_data_sector(disk, read_buffer, table_entry);
+        printf("Lendo setor de dados do cluster %d...\n", table_entry);
+        bo_print_buffer(read_buffer, SECTOR_SIZE);
+
+        if (fat12_write_data_sector(disk, buffer, table_entry) == false) {
+            fprintf(stderr, "Erro ao escrever no setor de dados do cluster %d\n", table_entry);
+            return 0;
+        }
+
+        printf("%llu bytes escritos no cluster %u...\n", bytes_read, table_entry);
+
+        fat12_read_data_sector(disk, read_buffer, table_entry);
+        bo_print_buffer(read_buffer, SECTOR_SIZE);
+
+        // Add the entry to the cluster list
+        arrpush(*cluster_list, table_entry);
+
+        total_bytes += bytes_read;
+        nex_entry_idx = table_entry + 1;
+    }
+
+    return total_bytes;  // Return the total number of bytes written
 }

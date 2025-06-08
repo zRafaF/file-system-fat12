@@ -127,7 +127,7 @@ bool _app_copy_sys_to_disk(const char *src, const char *dst) {
 
     uint32_t remaining_size = target_node->metadata.file_size;
     for (int i = 0; i < arrlen(cluster_list); i++) {
-        printf("Escrevendo %i/%lu...\n", i + 1, arrlen(cluster_list));
+        printf("Escrevendo %i/%llu...\n", i + 1, arrlen(cluster_list));
 
         uint8_t buffer[SECTOR_SIZE];
         if (!fat12_read_data_sector(disk, buffer, cluster_list[i])) {
@@ -167,46 +167,12 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
         return false;
     }
 
-    uint8_t buffer[SECTOR_SIZE] = {0};
-
     uint16_t *cluster_list = NULL;
 
-    // Calculate the number of sectors needed
-    size_t bytes_read = 0;
-    uint32_t total_bytes = 0;
-    uint16_t nex_entry_idx = 0;
-
-    while ((bytes_read = fread(buffer, 1, SECTOR_SIZE, source_file)) > 0) {
-        // Find the next free entry in the FAT table
-        uint16_t table_entry = fat12_find_next_free_entry(nex_entry_idx);
-        if (table_entry < FAT12_FAT_TABLES_RESERVED_ENTRIES) {
-            fprintf(stderr, "Nao ha entradas livres na tabela FAT.\n");
-            fclose(source_file);
-            arrfree(cluster_list);
-            return false;
-        }
-
-        uint8_t read_buffer[SECTOR_SIZE] = {0};
-        fat12_read_data_sector(disk, read_buffer, table_entry);
-        printf("Lendo setor de dados do cluster %d...\n", table_entry);
-        bo_print_buffer(read_buffer, SECTOR_SIZE);
-
-        if (fat12_write_data_sector(disk, buffer, table_entry) == false) {
-            fprintf(stderr, "Erro ao escrever no setor de dados do cluster %d\n", table_entry);
-            fclose(source_file);
-            arrfree(cluster_list);
-            return false;
-        }
-
-        printf("%lu bytes escritos no cluster %u...\n", bytes_read, table_entry);
-
-        fat12_read_data_sector(disk, read_buffer, table_entry);
-        bo_print_buffer(read_buffer, SECTOR_SIZE);
-
-        // Add the entry to the cluster list
-        arrpush(cluster_list, table_entry);
-        total_bytes += bytes_read;
-        nex_entry_idx = table_entry + 1;
+    if (!fs_write_file_to_data_area(source_file, disk, &cluster_list)) {
+        fprintf(stderr, "Erro ao escrever o arquivo no disco.\n");
+        fclose(source_file);
+        return false;
     }
 
     fclose(source_file);
