@@ -40,11 +40,13 @@ void fs_print_file_leaf(fat12_file_subdir_s dir, uint8_t depth) {
 
     f12h_format_date_time(creation_date, creation_time, formatted_date_time);
 
-    printf("%s\n", formatted_date_time);
+    printf("%s\t", formatted_date_time);
+
+    printf("%u\n", dir.first_cluster);
 }
 
 void fs_print_ls_directory_header() {
-    printf("Nome\t\tAtributo\tTamanho (bytes)\tData de Modificacao\tData de Criacao\n");
+    printf("Nome\t\tAtributo\tTamanho (bytes)\tData de Modificacao\tData de Criacao\t\tPrimeiro Cluster\n");
 }
 
 fs_directory_t fs_read_root_directory(FILE *disk) {

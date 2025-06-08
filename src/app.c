@@ -69,7 +69,7 @@ void app_ls1_callback(Menu *m) {
 
     fs_print_ls_directory_header();
 
-    printf("----------------------------------------------------------------------------------------------\n");
+    printf("----------------------------------------------------------------------------------------------------------------\n");
 
     for (int i = 0; i < arrlen(root_dir.subdirs); i++) {
         fat12_file_subdir_s subdir = root_dir.subdirs[i];
