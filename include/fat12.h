@@ -100,12 +100,21 @@ typedef struct {
     uint16_t year;
 } fat12_date_s;
 
+typedef struct {
+    uint16_t cluster;
+    uint8_t idx;
+} fat12_dir_entry_s;
+
 fat12_time_s fat12_extract_time(uint16_t time);
 fat12_date_s fat12_extract_date(uint16_t date);
 
 fat12_boot_sector_s fat12_read_boot_sector(FILE *disk);
 fat12_file_subdir_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx);
 fat12_file_subdir_s fat12_read_directory_from_data_area(FILE *disk, uint16_t cluster, uint8_t idx);
+// Allocate a directory entry in the root directory or in a subdirectory
+// If the cluster is 0, it will allocate in the root directory.
+// Returns the cluster number and of the allocated entry.
+fat12_dir_entry_s fat12_allocate_entry_in_directory(FILE *disk, uint16_t cluster);
 
 void fat12_print_boot_sector_info(fat12_boot_sector_s bs);
 void fat12_print_directory_info(fat12_file_subdir_s dir);
@@ -125,5 +134,17 @@ uint16_t fat12_find_next_free_entry(uint16_t start_idx);
 bool fat12_get_table_entry_chain(uint16_t first_entry, uint16_t **chain);
 
 char *fat12_attribute_to_string(uint8_t attribute);
+
+fat12_file_subdir_s fat12_format_file_entry(
+    const char *filename,
+    const char *extension,
+    fat12_file_subdir_attributes_e attributes,
+    uint16_t creation_time,
+    uint16_t creation_date,
+    uint16_t last_access_date,
+    uint16_t last_write_time,
+    uint16_t last_write_date,
+    uint16_t first_cluster,
+    uint32_t file_size);
 
 #endif  // FAT12_H

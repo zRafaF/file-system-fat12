@@ -103,6 +103,12 @@ fat12_file_subdir_s fat12_read_directory_from_data_area(FILE *disk, uint16_t clu
     return dir_entry;
 }
 
+fat12_dir_entry_s fat12_allocate_entry_in_directory(FILE *disk, uint16_t cluster) {
+    // TODO: Implement the logic to allocate a directory entry in the root directory or in a subdirectory.
+    // If the cluster is 0, it will allocate in the root directory.
+    // If the cluster is not 0, it will allocate in the subdirectory, if that is full it will extend the directory chain.
+}
+
 char *fat12_attribute_to_string(uint8_t attribute) {
     switch (attribute) {
         case FAT12_ATTR_NONE:
@@ -351,4 +357,41 @@ bool fat12_get_table_entry_chain(uint16_t first_entry, uint16_t **chain) {
     }
 
     return true;
+}
+
+fat12_file_subdir_s fat12_format_file_entry(
+    const char *filename,
+    const char *extension,
+    fat12_file_subdir_attributes_e attributes,
+    uint16_t creation_time,
+    uint16_t creation_date,
+    uint16_t last_access_date,
+    uint16_t last_write_time,
+    uint16_t last_write_date,
+    uint16_t first_cluster,
+    uint32_t file_size) {
+    assert(filename != NULL);
+    assert(extension != NULL);
+    fat12_file_subdir_s entry = {0};
+
+    // The filename on the FAT12 file system is limited to 8 characters, and the extension to 3 characters. Both are not null-terminated. and must be padded with spaces if shorter.
+    strncpy(entry.filename, filename, FAT12_FILE_NAME_LENGTH);
+    if (strlen(filename) < FAT12_FILE_NAME_LENGTH) {
+        memset(entry.filename + strlen(filename), ' ', FAT12_FILE_NAME_LENGTH - strlen(filename));
+    }
+    strncpy(entry.extension, extension, FAT12_FILE_EXTENSION_LENGTH);
+    if (strlen(extension) < FAT12_FILE_EXTENSION_LENGTH) {
+        memset(entry.extension + strlen(extension), ' ', FAT12_FILE_EXTENSION_LENGTH - strlen(extension));
+    }
+
+    entry.attributes = attributes;
+    memset(entry.reserved, 0, sizeof(entry.reserved));  // Reserved bytes should be zeroed out
+    entry.creation_time = creation_time;
+    entry.creation_date = creation_date;
+    entry.last_access_date = last_access_date;
+    entry.last_write_time = last_write_time;
+    entry.last_write_date = last_write_date;
+    entry.first_cluster = first_cluster;
+    entry.file_size = file_size;
+    return entry;
 }

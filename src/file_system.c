@@ -103,6 +103,10 @@ fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster) {
     return dir;
 }
 
+bool fs_add_file_to_directory(FILE *disk, fs_directory_tree_node_t *dir_node, fat12_file_subdir_s file_entry) {
+    // TODO: Implement the logic to add a file to the directory.
+}
+
 static void _fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_t *dir) {
     if (dir->depth >= FS_MAX_DIRECTORY_DEPTH) {
         fprintf(stderr, "Maximum directory depth reached: %llu\n", dir->depth);
@@ -272,6 +276,39 @@ fs_directory_tree_node_t *fs_get_node_by_path(fs_directory_tree_node_t *root, co
     return current_node;  // Return the found node
 }
 
+fs_directory_tree_node_t *fs_get_directory_node_by_path(fs_directory_tree_node_t *root, const char *path) {
+    if (!root || !path || path[0] != '/') {
+        return NULL;
+    }
+
+    // Special case: root directory path ("/file.txt")
+    if (strchr(path + 1, '/') == NULL) {
+        return root;
+    }
+
+    char *path_copy = strdup(path);
+    if (!path_copy) {
+        perror("strdup");
+        return NULL;
+    }
+
+    char *last_slash = strrchr(path_copy, '/');
+    if (!last_slash || last_slash == path_copy) {
+        free(path_copy);
+        return root;  // Only one level deep
+    }
+
+    *last_slash = '\0';
+    fs_directory_tree_node_t *dir_node = fs_get_node_by_path(root, path_copy);
+    free(path_copy);
+
+    if (!dir_node || dir_node->type != FS_DIRECTORY_TYPE_SUBDIR) {
+        return NULL;
+    }
+
+    return dir_node;
+}
+
 static void _fs_print_tree_ascii(
     fs_directory_tree_node_t *node,
     const char *prefix,
@@ -372,20 +409,12 @@ uint32_t fs_write_file_to_data_area(FILE *source_file, FILE *disk, uint16_t **cl
             return 0;
         }
 
-        uint8_t read_buffer[SECTOR_SIZE] = {0};
-        fat12_read_data_sector(disk, read_buffer, table_entry);
-        printf("Lendo setor de dados do cluster %d...\n", table_entry);
-        bo_print_buffer(read_buffer, SECTOR_SIZE);
-
         if (fat12_write_data_sector(disk, buffer, table_entry) == false) {
             fprintf(stderr, "Erro ao escrever no setor de dados do cluster %d\n", table_entry);
             return 0;
         }
 
-        printf("%llu bytes escritos no cluster %u...\n", bytes_read, table_entry);
-
-        fat12_read_data_sector(disk, read_buffer, table_entry);
-        bo_print_buffer(read_buffer, SECTOR_SIZE);
+        printf("%llu bytes escritos no cluster %u\n", bytes_read, table_entry);
 
         // Add the entry to the cluster list
         arrpush(*cluster_list, table_entry);
@@ -398,11 +427,6 @@ uint32_t fs_write_file_to_data_area(FILE *source_file, FILE *disk, uint16_t **cl
 }
 
 bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list) {
-    for (int i = 0; i < 20; i++) {
-        uint16_t entry = fat12_get_table_entry(i);
-        printf("FAT entry %d: %x\n", i, entry);
-    }
-
     for (int i = 0; i < arrlen(cluster_list); i++) {
         uint16_t entry = cluster_list[i];
         uint16_t next_entry = (i < ((int)arrlen(cluster_list)) - 1) ? cluster_list[i + 1] : FAT12_EOC_END;
@@ -410,11 +434,6 @@ bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list) {
             fprintf(stderr, "Erro ao escrever a entrada %d na tabela FAT: %x\n", i, entry);
             return false;
         }
-    }
-
-    for (int i = 0; i < 20; i++) {
-        uint16_t entry = fat12_get_table_entry(i);
-        printf("FAT entry %d: %x\n", i, entry);
     }
 
     return true;  // Return true if all entries were written successfully

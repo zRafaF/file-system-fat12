@@ -157,9 +157,24 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
         fprintf(stderr, "Nome de arquivo invalido: '%.*s'\n", FAT12_FILE_NAME_LENGTH, src);
         return false;
     }
-
     printf("Nome: %.*s\n", FAT12_FILE_NAME_LENGTH, filename.file);
     printf("Extensao: %.*s\n\n", FAT12_FILE_EXTENSION_LENGTH, filename.extension);
+
+    fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
+    if (disk_tree == NULL) {
+        printf("Erro ao criar a arvore de diretorios do disco.\n");
+        return false;
+    }
+
+    fs_directory_tree_node_t *target_node = fs_get_directory_node_by_path(disk_tree, dst);
+    if (target_node == NULL) {
+        printf("Caminho '%s' nao encontrado no disco.\n", dst);
+        fs_free_disk_tree(disk_tree);
+        return false;
+    }
+
+    printf("Escrevendo no diretorio: \'%s\'\n", target_node->metadata.filename);
+    printf("Profundidade do diretorio: %u\n\n", target_node->depth);
 
     FILE *source_file = fopen(src, "r");
     if (source_file == NULL) {
@@ -182,6 +197,22 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
         arrfree(cluster_list);
         return false;
     }
+
+    fat12_time_s example_time = {.seconds = 30, .minutes = 15, .hours = 10};
+    fat12_date_s example_date = {.day = 12, .month = 12, .year = 2024};
+    fat12_file_subdir_s file_entry = fat12_format_file_entry(
+        filename.file,                 // File name
+        filename.extension,            // extension
+        FAT12_ATTR_NONE,               // 0x00 - No attributes
+        f12h_pack_time(example_time),  // Creation time
+        f12h_pack_date(example_date),  // Creation date
+        f12h_pack_date(example_date),  // Last access date
+        f12h_pack_time(example_time),  // Last write time
+        f12h_pack_date(example_date),  // Last write date
+        cluster_list[0],               // First cluster from the list
+        ftell(source_file)             // File size
+    );
+    fs_add_file_to_directory(disk, target_node, file_entry);
 
     fclose(source_file);
     arrfree(cluster_list);
@@ -229,6 +260,6 @@ void app_debug1_callback(Menu *m) {
 void app_debug2_callback(Menu *m) {
     UNUSED(m);
     // app_copy_complete(0, "/ARQ.TXT", "./teste.txt");
-    app_copy_complete(1, "teste.txt", "/TT.TXT");
+    app_copy_complete(1, "teste.txt", "/SUBDIR/t.txt");
 }
 #endif

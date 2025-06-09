@@ -47,3 +47,21 @@ char* f12h_format_date_time(fat12_date_s date, fat12_time_s time, char* buffer) 
 
     return buffer;
 }
+
+uint16_t f12h_pack_date(fat12_date_s date) {
+    // Pack the date into a 16-bit value
+    uint16_t packed_date = 0;
+    packed_date |= (date.year - 1980) << 9;  // Year since 1980
+    packed_date |= date.month << 5;          // Month (1-12)
+    packed_date |= date.day;                 // Day (1-31)
+    return packed_date;
+}
+
+uint16_t f12h_pack_time(fat12_time_s time) {
+    // Pack the time into a 16-bit value
+    uint16_t packed_time = 0;
+    packed_time |= (time.hours & 0x1F) << 11;   // Hours (0-23)
+    packed_time |= (time.minutes & 0x3F) << 5;  // Minutes (0-59)
+    packed_time |= (time.seconds & 0x1F) * 2;   // Seconds (0-29, multiplied by 2)
+    return packed_time;
+}

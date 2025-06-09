@@ -48,10 +48,12 @@ fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster);
 // This function reads the root directory and builds a tree structure of directories and files.
 // WARNING: The returned pointer must be freed after use to avoid memory leaks (fs_free_disk_tree()).
 fs_directory_tree_node_t *fs_create_disk_tree(FILE *disk);
-
 // Finds a node in the directory tree by its path.
 // Returns a pointer to the node if found, or NULL if not found.
 fs_directory_tree_node_t *fs_get_node_by_path(fs_directory_tree_node_t *root, const char *path);
+// Traverses the directory tree from the root to locate the node for the parent directory in a given path.
+// Returns the node if found, or NULL for invalid or non-existent paths.
+fs_directory_tree_node_t *fs_get_directory_node_by_path(fs_directory_tree_node_t *root, const char *path);
 
 void fs_print_directory_tree(fs_directory_tree_node_t *dir_tree);
 
@@ -65,7 +67,8 @@ fs_fat_compatible_filename_t fs_get_filename_from_path(const char *path);
 
 // Returns the total size of the file system in bytes. Returns 0 on error.
 uint32_t fs_write_file_to_data_area(FILE *source_file, FILE *disk, uint16_t **cluster_list);
-
 bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list);
+// Adds a file to the disk, does not update the directory tree.
+bool fs_add_file_to_directory(FILE *disk, fs_directory_tree_node_t *dir_node, fat12_file_subdir_s file_entry);
 
 #endif  // FILE_SYSTEM_H
