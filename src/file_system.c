@@ -491,3 +491,60 @@ bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list) {
 
     return true;  // Return true if all entries were written successfully
 }
+
+bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node) {
+    // If it has children, it is a directory and will be recursively deleted.
+    if (arrlen(dir_node->children) > 0) {
+        for (int i = 0; i < arrlen(dir_node->children); i++) {
+            fs_remove_file_or_directory(disk, dir_node->children[i]);
+        }
+    }
+
+    // At this point, we have a file or directory node that we want to remove.
+    // Deleting the fat table entry and removing entry from parent directory
+
+    // First find the cluster chain
+    uint16_t *cluster_list = NULL;
+    if (!fat12_get_table_entry_chain(dir_node->metadata.first_cluster, &cluster_list)) {
+        fprintf(stderr, "Nao foi possivel encontrar a lista de clusters de %s\n", dir_node->metadata.filename);
+        arrfree(cluster_list);
+        return false;
+    }
+
+    // Remove the entry from the FAT table
+    for (int i = 0; i < arrlen(cluster_list); i++) {
+        uint16_t entry = cluster_list[i];
+        if (!fat12_set_table_entry(entry, FAT12_FREE)) {
+            fprintf(stderr, "Erro ao remover a entrada %d da tabela FAT: %x\n", i, entry);
+            arrfree(cluster_list);
+            return false;
+        }
+    }
+    fat12_write_full_fat_table(disk);
+
+    // Now remove the entry from the parent directory
+    // if the parent is NULL, we are in the root directory
+    if (dir_node->parent == NULL) {
+        fprintf(stderr, "Nao e possivel remover o diretorio raiz.\n");
+        arrfree(cluster_list);
+        return false;  // Cannot remove root directory
+    } else {
+        // Find the entry in the parent directory
+        fat12_dir_entry_s entry = fat12_allocate_entry_in_directory(disk, dir_node->parent->metadata.first_cluster);
+        if (entry.cluster == 0 && entry.idx == 0) {
+            fprintf(stderr, "Failed to allocate directory entry for %s\n", dir_node->metadata.filename);
+            arrfree(cluster_list);
+            return false;  // Failed to allocate entry
+        }
+
+        // Write an empty entry to remove it
+        fat12_file_subdir_s empty_entry = {0};
+        if (!fat12_write_directory(disk, entry.cluster, entry.idx, empty_entry)) {
+            fprintf(stderr, "Failed to write empty directory entry for %s\n", dir_node->metadata.filename);
+            arrfree(cluster_list);
+            return false;  // Failed to write entry
+        }
+    }
+    // Free the memory
+    arrfree(cluster_list);
+}

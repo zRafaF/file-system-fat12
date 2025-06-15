@@ -98,6 +98,27 @@ void app_ls_callback(Menu *m) {
 void app_rm_callback(Menu *m, const char *input) {
     UNUSED(m);
     printf("Removendo arquivo ou diretorio: %s\n", input);
+
+    fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
+    if (disk_tree == NULL) {
+        printf("Erro ao criar a arvore de diretorios do disco.\n");
+        return;
+    }
+
+    fs_directory_tree_node_t *target_node = fs_get_node_by_path(disk_tree, input);
+    if (target_node == NULL) {
+        printf("Caminho '%s' nao encontrado no disco.\n", input);
+        fs_free_disk_tree(disk_tree);
+        return;
+    }
+
+    if (!fs_remove_file_or_directory(disk, target_node)) {
+        fprintf(stderr, "Erro ao remover o arquivo ou diretorio '%s'.\n", input);
+        fs_free_disk_tree(disk_tree);
+        return;
+    }
+    printf("Arquivo ou diretorio '%s' removido com sucesso.\n", input);
+    fs_free_disk_tree(disk_tree);
 }
 
 bool _app_copy_sys_to_disk(const char *src, const char *dst) {
@@ -307,6 +328,7 @@ void app_quick_actions_reset_images_callback(Menu *m) {
 #endif
 
     printf("Imagens restauradas com sucesso.\n");
+    exit(0);  // Exit the program after restoring images
 }
 
 void app_quick_actions_copy_to_disk_callback(Menu *m) {

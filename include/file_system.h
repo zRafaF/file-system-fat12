@@ -71,4 +71,6 @@ bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list);
 // Adds a file to the disk, does not update the directory tree.
 bool fs_add_file_to_directory(FILE *disk, fs_directory_tree_node_t *dir_node, fat12_file_subdir_s file_entry);
 
+bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node);
+
 #endif  // FILE_SYSTEM_H
