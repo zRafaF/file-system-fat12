@@ -132,6 +132,7 @@ void init_menus(Menu* unmounted_menu, Menu* mounted_menu) {
     menu_add_item(quick_actions, "Copiar ARQ.TXT para o disco", app_quick_actions_copy_to_disk_callback);
     menu_add_item(quick_actions, "Copiar Shrek para o sistema", app_quick_actions_copy_to_system_callback);
     menu_add_item(quick_actions, "Listar Tabela FAT12", app_quick_actions_list_fat12_table_callback);
+    menu_add_item(quick_actions, "Remover arquivo", app_quick_actions_remove_file_callback);
     menu_add_item(quick_actions, "Voltar", menu_back);
 
     menu_add_submenu(mounted_menu, "Operacoes Rapidas", quick_actions);

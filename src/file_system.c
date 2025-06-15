@@ -514,6 +514,7 @@ bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node)
     // Remove the entry from the FAT table
     for (int i = 0; i < arrlen(cluster_list); i++) {
         uint16_t entry = cluster_list[i];
+        printf("Removendo entrada %d da tabela FAT: %x\n", i, entry);
         if (!fat12_set_table_entry(entry, FAT12_FREE)) {
             fprintf(stderr, "Erro ao remover a entrada %d da tabela FAT: %x\n", i, entry);
             arrfree(cluster_list);

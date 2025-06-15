@@ -112,6 +112,8 @@ void app_rm_callback(Menu *m, const char *input) {
         return;
     }
 
+    printf("Removendo o arquivo ou diretorio '%s'...\n", target_node->metadata.filename);
+
     if (!fs_remove_file_or_directory(disk, target_node)) {
         fprintf(stderr, "Erro ao remover o arquivo ou diretorio '%s'.\n", input);
         fs_free_disk_tree(disk_tree);
@@ -351,4 +353,10 @@ void app_quick_actions_list_fat12_table_callback(Menu *m) {
         uint16_t entry = fat12_get_table_entry(i);
         printf("FAT entry %d: %x\n", i, entry);
     }
+}
+
+void app_quick_actions_remove_file_callback(Menu *m) {
+    UNUSED(m);
+    printf("Removendo arquivo: /SUBDIR/TESTE.C\n");
+    app_rm_callback(m, "/SUBDIR/TESTE.C");
 }
