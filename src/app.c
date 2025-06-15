@@ -101,6 +101,7 @@ void app_rm_callback(Menu *m, const char *input) {
 }
 
 bool _app_copy_sys_to_disk(const char *src, const char *dst) {
+    printf("Copiando do sistema para o disco...\n");
     fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
     if (disk_tree == NULL) {
         printf("Erro ao criar a arvore de diretorios do disco.\n");
@@ -148,6 +149,7 @@ bool _app_copy_sys_to_disk(const char *src, const char *dst) {
     fclose(target_file);
     fs_free_disk_tree(disk_tree);
     arrfree(cluster_list);
+    fflush(disk);
     return true;
 }
 
@@ -231,6 +233,8 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
 
     fclose(source_file);
     arrfree(cluster_list);
+    fs_free_disk_tree(disk_tree);
+    fflush(disk);  // Ensure all changes are written to the disk image
     return true;
 }
 
@@ -259,7 +263,7 @@ void app_copy_complete(int copy_type, const char *src, const char *dst) {
             printf("Erro: Tipo de copia desconhecido.\n");
             break;
     }
-
+    fflush(disk);
     menu_wait_for_any_key();
 }
 

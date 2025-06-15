@@ -487,6 +487,7 @@ bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list) {
             return false;
         }
     }
+    fat12_write_full_fat_table(disk);
 
     return true;  // Return true if all entries were written successfully
 }

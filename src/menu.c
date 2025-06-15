@@ -80,8 +80,8 @@ static void setup_copy_flow(Menu* parent_menu) {
 
     // Step 1
     Menu* step1 = menu_create("Selecione o tipo de operacao", NULL);
-    menu_add_item(step1, "Disco -> Sistema", handle_move_type);
     menu_add_item(step1, "Sistema -> Disco", handle_move_type);
+    menu_add_item(step1, "Disco -> Sistema", handle_move_type);
     menu_add_item(step1, "Voltar", handle_cancel);
 
     // Step 2

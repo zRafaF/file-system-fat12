@@ -310,6 +310,26 @@ uint8_t *fat12_load_full_fat_table(FILE *disk) {
 
     return fat_table;
 }
+bool fat12_write_full_fat_table(FILE *disk){
+    assert(disk != NULL);
+    assert(has_loaded_fat_table);
+    fat12_reset_file_seek(disk);
+
+    // Move to the start of the FAT table
+    if (fseek(disk, SECTOR_SIZE * FAT12_FAT_TABLES_START, SEEK_SET) != 0) {
+        perror("Failed to seek to FAT table position");
+        return false;
+    }
+
+    // Write the FAT table to the disk
+    size_t bytes_written = fwrite(fat_table, sizeof(uint8_t), SECTOR_SIZE * FAT12_NUM_OF_FAT_TABLES_SECTORS, disk);
+    if (bytes_written != SECTOR_SIZE * FAT12_NUM_OF_FAT_TABLES_SECTORS) {
+        perror("Failed to write FAT table data");
+        return false;
+    }
+
+    return true;  // Return true if the write was successful
+}
 
 // Reads a FAT12 table entry.
 uint16_t fat12_get_table_entry(uint16_t entry_idx) {
