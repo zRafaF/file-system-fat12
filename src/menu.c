@@ -126,6 +126,15 @@ void init_menus(Menu* unmounted_menu, Menu* mounted_menu) {
     menu_add_input(mounted_menu, "rm   (Remover arquivo ou diretorio) ", app_rm_callback);
 
     setup_copy_flow(mounted_menu);
+
+    Menu* quick_actions = menu_create("OPERACOES RAPIDAS", NULL);
+    menu_add_item(quick_actions, "Recuperar imagens do backup", app_quick_actions_reset_images_callback);
+    menu_add_item(quick_actions, "Copiar Shrek para Disco", app_quick_actions_copy_to_disk_callback);
+    menu_add_item(quick_actions, "Copiar ARQ.TXT ", app_quick_actions_copy_to_system_callback);
+    menu_add_item(quick_actions, "Listar Tabela FAT12", app_quick_actions_list_fat12_table_callback);
+    menu_add_item(quick_actions, "Voltar", menu_back);
+
+    menu_add_submenu(mounted_menu, "Operacoes Rapidas", quick_actions);
     menu_add_item(mounted_menu, "Desmontar Imagem", app_unmount_callback);
 }
 

@@ -277,3 +277,51 @@ void app_debug2_callback(Menu *m) {
     app_copy_complete(1, "teste.txt", "/SUBDIR/t.txt");
 }
 #endif
+
+// Copies and replace the images at /imgs/backup to /imgs/
+void app_quick_actions_reset_images_callback(Menu *m) {
+    UNUSED(m);
+    printf("Recuperando imagens para o estado original...\n");
+
+#ifdef _WIN32
+    // Ensure destination directory exists
+    system("if not exist \"imgs\\\" mkdir imgs");
+    // Copy with overwrite
+    if (system("copy /Y \"imgs\\backups\\*.img\" \"imgs\\\"") != 0) {
+        perror("Erro ao restaurar imagens no Windows");
+        return;
+    }
+#else
+    // Ensure destination directory exists
+    system("mkdir -p imgs");
+    // Copy with overwrite
+    if (system("cp -f imgs/backups/*.img imgs/") != 0) {
+        perror("Erro ao restaurar imagens no Linux");
+        return;
+    }
+#endif
+
+    printf("Imagens restauradas com sucesso.\n");
+}
+
+void app_quick_actions_copy_to_disk_callback(Menu *m) {
+    UNUSED(m);
+    printf("Copiando /AQR.TXT do sistema para o disco\n");
+    app_copy_complete(0, "/ARQ.TXT", "./ARQ.TXT");
+}
+void app_quick_actions_copy_to_system_callback(Menu *m) {
+    UNUSED(m);
+    printf("Copiando shrek.md para o sistema em /SUBDIR/script.md\n");
+    printf("\nFalha na imagem sem subdiretorios\n");
+    app_copy_complete(1, "shrek.md", "/SUBDIR/script.md");
+}
+
+void app_quick_actions_list_fat12_table_callback(Menu *m) {
+    UNUSED(m);
+    printf("Listando 100 itens da tabela FAT12:\n");
+
+    for (int i = 0; i < 100; i++) {
+        uint16_t entry = fat12_get_table_entry(i);
+        printf("FAT entry %d: %x\n", i, entry);
+    }
+}
