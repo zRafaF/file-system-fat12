@@ -313,7 +313,7 @@ void app_quick_actions_copy_to_system_callback(Menu *m) {
     UNUSED(m);
     printf("Copiando shrek.md para o sistema em /SUBDIR/script.md\n");
     printf("\nFalha na imagem sem subdiretorios\n");
-    app_copy_complete(1, "shrek.md", "/SUBDIR/script.md");
+    app_copy_complete(1, "shrek.md", "/SUBDIR/script.txt");
 }
 
 void app_quick_actions_list_fat12_table_callback(Menu *m) {
