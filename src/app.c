@@ -159,8 +159,6 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
         fprintf(stderr, "Nome de arquivo invalido: '%.*s'\n", FAT12_FILE_NAME_LENGTH, src);
         return false;
     }
-    printf("Nome: %.*s\n", FAT12_FILE_NAME_LENGTH, filename.file);
-    printf("Extensao: %.*s\n\n", FAT12_FILE_EXTENSION_LENGTH, filename.extension);
 
     fs_directory_tree_node_t *disk_tree = fs_create_disk_tree(disk);
     if (disk_tree == NULL) {
@@ -206,6 +204,9 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
     struct tm tm = *localtime(&t);
     fat12_time_s current_time = {.seconds = tm.tm_sec, .minutes = tm.tm_min, .hours = tm.tm_hour};
     fat12_date_s current_date = {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
+
+    printf("Name: %.*s\n", FAT12_FILE_NAME_LENGTH, filename.file);
+    printf("Extension: %s\n", filename.extension);
 
     fat12_file_subdir_s file_entry = fat12_format_file_entry(
         filename.file,                 // File name

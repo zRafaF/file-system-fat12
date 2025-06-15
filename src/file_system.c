@@ -388,26 +388,59 @@ fs_fat_compatible_filename_t fs_get_filename_from_path(const char *path) {
     fs_fat_compatible_filename_t filename = {0};
 
     if (!path || strlen(path) == 0) {
-        return filename;  // Return empty filename if path is NULL or empty
+        return filename;  // Return zero-filled struct
     }
 
+    // Find start of filename (after last slash or backslash)
     const char *last_slash = strrchr(path, '/');
     if (!last_slash) {
-        last_slash = strrchr(path, '\\');  // Check for backslash
+        last_slash = strrchr(path, '\\');
     }
+    const char *file_start = last_slash ? last_slash + 1 : path;
 
-    if (last_slash) {
-        strncpy(filename.file, last_slash + 1, FAT12_FILE_NAME_LENGTH);
+    // Find last dot (extension separator)
+    const char *dot = strrchr(file_start, '.');
+
+    size_t name_length;
+    if (dot && dot > file_start) {
+        name_length = (size_t)(dot - file_start);
+        if (name_length > FAT12_FILE_NAME_LENGTH) {
+            name_length = FAT12_FILE_NAME_LENGTH;
+        }
     } else {
-        strncpy(filename.file, path, FAT12_FILE_NAME_LENGTH);
+        name_length = strlen(file_start);
+        if (name_length > FAT12_FILE_NAME_LENGTH) {
+            name_length = FAT12_FILE_NAME_LENGTH;
+        }
+        dot = NULL;  // No extension
     }
 
-    char *dot = strrchr(filename.file, '.');
+    // Copy filename portion, space pad
+    size_t i;
+    for (i = 0; i < name_length; i++) {
+        filename.file[i] = file_start[i];
+    }
+    for (; i < FAT12_FILE_NAME_LENGTH; i++) {
+        filename.file[i] = ' ';
+    }
+
+    // If extension exists, copy it (up to 3 chars), space pad
     if (dot) {
-        *dot = '\0';  // Split at the dot
-        strncpy(filename.extension, dot + 1, FAT12_FILE_EXTENSION_LENGTH);
+        size_t ext_len = strlen(dot + 1);
+        if (ext_len > FAT12_FILE_EXTENSION_LENGTH) {
+            ext_len = FAT12_FILE_EXTENSION_LENGTH;
+        }
+        for (i = 0; i < ext_len; i++) {
+            filename.extension[i] = dot[1 + i];
+        }
+        for (; i < FAT12_FILE_EXTENSION_LENGTH; i++) {
+            filename.extension[i] = ' ';
+        }
     } else {
-        filename.extension[0] = '\0';  // No extension found
+        // No extension: space fill
+        for (i = 0; i < FAT12_FILE_EXTENSION_LENGTH; i++) {
+            filename.extension[i] = ' ';
+        }
     }
 
     return filename;
