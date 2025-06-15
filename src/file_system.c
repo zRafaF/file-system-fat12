@@ -104,7 +104,26 @@ fs_directory_t fs_read_directory(FILE *disk, uint16_t cluster) {
 }
 
 bool fs_add_file_to_directory(FILE *disk, fs_directory_tree_node_t *dir_node, fat12_file_subdir_s file_entry) {
-    // TODO: Implement the logic to add a file to the directory.
+    assert(disk != NULL);
+    assert(dir_node != NULL);
+    assert(file_entry.filename[0] != 0x00);
+
+    fat12_dir_entry_s entry = fat12_allocate_entry_in_directory(disk, dir_node->metadata.first_cluster);
+    if (entry.cluster == 0 && entry.idx == 0) {
+        fprintf(stderr, "Failed to allocate directory entry for %s\n", file_entry.filename);
+        return false;  // Failed to allocate entry
+    }
+
+    if (!fat12_write_directory(
+            disk,
+            entry.cluster,
+            entry.idx,
+            file_entry)) {
+        fprintf(stderr, "Failed to write directory entry for %s\n", file_entry.filename);
+        return false;  // Failed to write entry
+    }
+
+    return true;
 }
 
 static void _fs_recursive_create_subdirs_tree(FILE *disk, fs_directory_tree_node_t *dir) {

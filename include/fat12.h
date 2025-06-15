@@ -111,6 +111,12 @@ fat12_date_s fat12_extract_date(uint16_t date);
 fat12_boot_sector_s fat12_read_boot_sector(FILE *disk);
 fat12_file_subdir_s fat12_read_directory_entry(FILE *disk, uint16_t entry_idx);
 fat12_file_subdir_s fat12_read_directory_from_data_area(FILE *disk, uint16_t cluster, uint8_t idx);
+bool fat12_write_directory(
+    FILE *disk,
+    uint16_t cluster,
+    uint8_t idx,
+    fat12_file_subdir_s entry);
+
 // Allocate a directory entry in the root directory or in a subdirectory
 // If the cluster is 0, it will allocate in the root directory.
 // Returns the cluster number and of the allocated entry.

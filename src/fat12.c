@@ -103,10 +103,68 @@ fat12_file_subdir_s fat12_read_directory_from_data_area(FILE *disk, uint16_t clu
     return dir_entry;
 }
 
+// If cluster is 0, it will write to the root directory.
+bool fat12_write_directory(
+    FILE *disk,
+    uint16_t cluster,
+    uint8_t idx,
+    fat12_file_subdir_s entry) {
+    assert(disk != NULL);
+    assert(cluster < FAT12_MAX_CLUSTER_NUMBER);
+    assert(idx < FAT12_DIRECTORY_ENTRIES_PER_SECTOR);
+    fat12_reset_file_seek(disk);
+
+    const uint64_t offset = ((FAT12_DATA_AREA_START + (cluster - FAT12_DATA_AREA_NUMBER_OFFSET)) * SECTOR_SIZE) + (idx * sizeof(fat12_file_subdir_s));
+    // Move to the start of the directory sector
+
+    if (fseek(disk, offset, SEEK_SET) != 0) {
+        perror("Failed to seek to directory sector position");
+        return false;  // Return false if the seek failed
+    }
+    // Write the directory entry to the disk
+    size_t bytes_written = fwrite(&entry, sizeof(fat12_file_subdir_s), 1, disk);
+    if (bytes_written != 1) {
+        perror("Failed to write directory entry to sector");
+        return false;  // Return false if the write failed
+    }
+
+    // Flush the disk to ensure the data is written
+    if (fflush(disk) != 0) {
+        perror("Failed to flush disk after writing directory entry");
+        return false;  // Return false if the write failed
+    }
+
+    return true;  // Return the written entry
+}
+
 fat12_dir_entry_s fat12_allocate_entry_in_directory(FILE *disk, uint16_t cluster) {
     // TODO: Implement the logic to allocate a directory entry in the root directory or in a subdirectory.
     // If the cluster is 0, it will allocate in the root directory.
     // If the cluster is not 0, it will allocate in the subdirectory, if that is full it will extend the directory chain.
+
+    assert(disk != NULL);
+    assert(cluster < FAT12_MAX_CLUSTER_NUMBER);
+    fat12_reset_file_seek(disk);
+    fat12_dir_entry_s entry = {0};
+    // Find the next free entry in the directory
+    for (uint16_t i = 0; i < FAT12_DIRECTORY_ENTRIES_PER_SECTOR; i++) {
+        if (cluster == 0) {
+            // If cluster is 0, we are in the root directory
+            fat12_file_subdir_s dir_entry = fat12_read_directory_entry(disk, i);
+            if (dir_entry.filename[0] == 0x00 || dir_entry.filename[0] == 0xE5) {  // Empty or deleted entry
+                entry.cluster = 0;                                                 // Root directory
+                entry.idx = i;
+                return entry;  // Return the first free entry found
+            }
+        } else {
+            fat12_file_subdir_s dir_entry = fat12_read_directory_from_data_area(disk, cluster, i);
+            if (dir_entry.filename[0] == 0x00 || dir_entry.filename[0] == 0xE5) {  // Empty or deleted entry
+                entry.cluster = cluster;
+                entry.idx = i;
+                return entry;  // Return the first free entry found
+            }
+        }
+    }
 }
 
 char *fat12_attribute_to_string(uint8_t attribute) {

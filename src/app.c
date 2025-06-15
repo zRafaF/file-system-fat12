@@ -1,5 +1,7 @@
 #include "app.h"
 
+#include <time.h>
+
 #include "stb_ds.h"
 
 static FILE *disk = NULL;
@@ -152,7 +154,7 @@ bool _app_copy_sys_to_disk(const char *src, const char *dst) {
 bool _app_copy_disk_to_sys(const char *src, const char *dst) {
     printf("Copiando do disco para o sistema...\n");
 
-    fs_fat_compatible_filename_t filename = fs_get_filename_from_path(src);
+    fs_fat_compatible_filename_t filename = fs_get_filename_from_path(dst);
     if (filename.file[0] == 0) {
         fprintf(stderr, "Nome de arquivo invalido: '%.*s'\n", FAT12_FILE_NAME_LENGTH, src);
         return false;
@@ -184,7 +186,9 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
 
     uint16_t *cluster_list = NULL;
 
-    if (!fs_write_file_to_data_area(source_file, disk, &cluster_list)) {
+    uint32_t file_size = fs_write_file_to_data_area(source_file, disk, &cluster_list);
+
+    if (!file_size) {
         fprintf(stderr, "Erro ao escrever o arquivo na area de dados.\n");
         fclose(source_file);
         arrfree(cluster_list);
@@ -198,21 +202,31 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
         return false;
     }
 
-    fat12_time_s example_time = {.seconds = 30, .minutes = 15, .hours = 10};
-    fat12_date_s example_date = {.day = 12, .month = 12, .year = 2024};
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    fat12_time_s current_time = {.seconds = tm.tm_sec, .minutes = tm.tm_min, .hours = tm.tm_hour};
+    fat12_date_s current_date = {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
+
     fat12_file_subdir_s file_entry = fat12_format_file_entry(
         filename.file,                 // File name
         filename.extension,            // extension
         FAT12_ATTR_NONE,               // 0x00 - No attributes
-        f12h_pack_time(example_time),  // Creation time
-        f12h_pack_date(example_date),  // Creation date
-        f12h_pack_date(example_date),  // Last access date
-        f12h_pack_time(example_time),  // Last write time
-        f12h_pack_date(example_date),  // Last write date
+        f12h_pack_time(current_time),  // Creation time
+        f12h_pack_date(current_date),  // Creation date
+        f12h_pack_date(current_date),  // Last access date
+        f12h_pack_time(current_time),  // Last write time
+        f12h_pack_date(current_date),  // Last write date
         cluster_list[0],               // First cluster from the list
-        ftell(source_file)             // File size
+        file_size                      // File size
     );
-    fs_add_file_to_directory(disk, target_node, file_entry);
+
+    if (!fs_add_file_to_directory(disk, target_node, file_entry)) {
+        fprintf(stderr, "Erro ao adicionar o arquivo ao diretorio.\n");
+        fclose(source_file);
+        arrfree(cluster_list);
+        fs_free_disk_tree(disk_tree);
+        return false;
+    }
 
     fclose(source_file);
     arrfree(cluster_list);
