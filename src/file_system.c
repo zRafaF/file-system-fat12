@@ -493,8 +493,6 @@ bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list) {
 }
 
 bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node) {
-    printf("Removendo %s...\n", dir_node->metadata.filename);
-
     // If it has children, it is a directory and will be recursively deleted.
     if (arrlen(dir_node->children) > 0) {
         for (int i = 0; i < arrlen(dir_node->children); i++) {
@@ -527,16 +525,12 @@ bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node)
     // Now remove the entry from the parent directory
     // if the parent is NULL, we are in the root directory
     if (dir_node->parent->parent == NULL) {
-        printf("Removendo do diretorio raiz...\n");
         for (int i = 0; i < FAT12_ROOT_DIRECTORY_ENTRIES; i++) {
             fat12_file_subdir_s dir_entry = fat12_read_directory_entry(disk, i);
-
-            printf("Comparing: %s with %s\n", dir_entry.filename, dir_node->metadata.filename);
 
             if (dir_entry.first_cluster == dir_node->metadata.first_cluster &&
                 (strcmp(dir_entry.filename, dir_node->metadata.filename) == 0)) {
                 // Found the entry, remove it
-                printf("Entrada encontrada no diretorio raiz: %s\n", dir_node->metadata.filename);
                 if (!fat12_write_directory(disk, 0, i, (fat12_file_subdir_s){0})) {
                     fprintf(stderr, "Erro ao remover a entrada do diretorio raiz: %s\n", dir_node->metadata.filename);
                     arrfree(cluster_list);

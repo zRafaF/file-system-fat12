@@ -230,9 +230,6 @@ bool _app_copy_disk_to_sys(const char *src, const char *dst) {
     fat12_time_s current_time = {.seconds = tm.tm_sec, .minutes = tm.tm_min, .hours = tm.tm_hour};
     fat12_date_s current_date = {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 
-    printf("Name: %.*s\n", FAT12_FILE_NAME_LENGTH, filename.file);
-    printf("Extension: %s\n", filename.extension);
-
     fat12_file_subdir_s file_entry = fat12_format_file_entry(
         filename.file,                 // File name
         filename.extension,            // extension
