@@ -27,11 +27,6 @@ make run
 
 ## Informações extras
 
-### Má formatação do diretório `/SUBDIR/`
-Esse diretório tem o first cluster na posição `6` e essa posição na tabela fat contem `0x000` o que significa **Livre** ao invés de `0xFFF` para simbolizar `EOF`
-
-> Por causa desse erro a remoção de arquivos possui um workaround
-
 ### _Edge case_ em cópia de arquivos para diretório cheio
 
 Se um arquivo for copiado para um diretório que já está cheio o sistema não fara a alocação de um novo bloco, essa ação resultará em um comportamento indefinido.

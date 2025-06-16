@@ -526,12 +526,17 @@ bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node)
 
     // Now remove the entry from the parent directory
     // if the parent is NULL, we are in the root directory
-    if (dir_node->parent == NULL) {
-        for (int i = 9; i < FAT12_ROOT_DIRECTORY_ENTRIES; i++) {
+    if (dir_node->parent->parent == NULL) {
+        printf("Removendo do diretorio raiz...\n");
+        for (int i = 0; i < FAT12_ROOT_DIRECTORY_ENTRIES; i++) {
             fat12_file_subdir_s dir_entry = fat12_read_directory_entry(disk, i);
+
+            printf("Comparing: %s with %s\n", dir_entry.filename, dir_node->metadata.filename);
+
             if (dir_entry.first_cluster == dir_node->metadata.first_cluster &&
-                strcmp(dir_entry.filename, dir_node->metadata.filename) == 0) {
+                (strcmp(dir_entry.filename, dir_node->metadata.filename) == 0)) {
                 // Found the entry, remove it
+                printf("Entrada encontrada no diretorio raiz: %s\n", dir_node->metadata.filename);
                 if (!fat12_write_directory(disk, 0, i, (fat12_file_subdir_s){0})) {
                     fprintf(stderr, "Erro ao remover a entrada do diretorio raiz: %s\n", dir_node->metadata.filename);
                     arrfree(cluster_list);
@@ -556,8 +561,6 @@ bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node)
                 // Read the directory entry from the data area
                 // We are reading from the parent directory's cluster chain
                 fat12_file_subdir_s dir_entry = fat12_read_directory_from_data_area(disk, cluster_chain[i], j);
-                printf("11: %d: %s\n", dir_entry.first_cluster, dir_entry.filename);
-                printf("22: %d: %s\n", dir_node->metadata.first_cluster, dir_node->metadata.filename);
 
                 if (dir_entry.first_cluster == dir_node->metadata.first_cluster &&
                     (strcmp(dir_entry.filename, dir_node->metadata.filename) == 0)) {
@@ -565,9 +568,9 @@ bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node)
                     if (!fat12_write_directory(disk, cluster_chain[i], j, (fat12_file_subdir_s){0})) {
                         fprintf(stderr, "Erro ao remover a entrada do diretorio: %s\n", dir_node->metadata.filename);
                         arrfree(cluster_list);
+                        arrfree(cluster_chain);
                         return false;
                     }
-                    printf("Entrada removida do diretorio: %s\n", dir_node->metadata.filename);
                     break;
                 }
             }
@@ -575,8 +578,7 @@ bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node)
         arrfree(cluster_chain);
     }
 
-    dir_node->metadata.first_cluster = 0;  // Clear the first cluster to indicate removal
-
     // Free the memory
     arrfree(cluster_list);
+    return true;
 }

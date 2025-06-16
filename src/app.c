@@ -357,6 +357,6 @@ void app_quick_actions_list_fat12_table_callback(Menu *m) {
 
 void app_quick_actions_remove_file_callback(Menu *m) {
     UNUSED(m);
-    printf("Removendo arquivo: /SUBDIR/TESTE.C\n");
-    app_rm_callback(m, "/SUBDIR/TESTE.C");
+    printf("Removendo arquivo: /ARQ.TXT\n");
+    app_rm_callback(m, "/ARQ.TXT");
 }
