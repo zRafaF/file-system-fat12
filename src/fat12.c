@@ -114,6 +114,8 @@ bool fat12_write_directory(
     assert(idx < FAT12_DIRECTORY_ENTRIES_PER_SECTOR);
     fat12_reset_file_seek(disk);
 
+    printf("Writing directory entry at cluster %u, index %u\n", cluster, idx);
+
     const uint64_t offset = ((FAT12_DATA_AREA_START + (cluster - FAT12_DATA_AREA_NUMBER_OFFSET)) * SECTOR_SIZE) + (idx * sizeof(fat12_file_subdir_s));
     // Move to the start of the directory sector
 
