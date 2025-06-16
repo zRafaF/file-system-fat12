@@ -310,7 +310,7 @@ uint8_t *fat12_load_full_fat_table(FILE *disk) {
 
     return fat_table;
 }
-bool fat12_write_full_fat_table(FILE *disk){
+bool fat12_write_full_fat_table(FILE *disk) {
     assert(disk != NULL);
     assert(has_loaded_fat_table);
     fat12_reset_file_seek(disk);
@@ -369,13 +369,13 @@ bool fat12_set_table_entry(uint16_t entry_idx, uint16_t value) {
     if ((entry_idx % 2) == 0) {
         // If entry_idx is even, the first byte contains the low 8 bits
         // and the second byte contains the high 4 bits.
-        fat_table[byte_offset] = value & 0xFF;             // Low byte
-        fat_table[byte_offset + 1] = (value >> 8) & 0x0F;  // High nibble
+        fat_table[byte_offset] = value & 0xFF;                                                     // Low byte
+        fat_table[byte_offset + 1] = (fat_table[byte_offset + 1] & 0xF0) | ((value >> 8) & 0x0F);  // High nibble
     } else {
         // If entry_idx is odd, the first byte contains the low 4 bits
         // and the second byte contains the high 8 bits.
-        fat_table[byte_offset] = (value & 0x0F) << 4;  // High nibble
-        fat_table[byte_offset + 1] = value >> 4;       // High byte
+        fat_table[byte_offset] = (fat_table[byte_offset] & 0x0F) | ((value & 0x0F) << 4);  // High nibble
+        fat_table[byte_offset + 1] = value >> 4;                                           // High byte
     }
 
     return true;
@@ -403,6 +403,7 @@ bool fat12_get_table_entry_chain(uint16_t first_entry, uint16_t **chain) {
     size_t number_of_reads = 0;
 
     uint16_t current_entry = *chain[arrlen(*chain) - 1];
+
     while (true) {
         uint16_t next_entry = fat12_get_table_entry(current_entry);
         number_of_reads++;

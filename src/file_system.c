@@ -493,6 +493,8 @@ bool fs_write_cluster_chain_to_fat_table(FILE *disk, uint16_t *cluster_list) {
 }
 
 bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node) {
+    printf("Removendo %s...\n", dir_node->metadata.filename);
+
     // If it has children, it is a directory and will be recursively deleted.
     if (arrlen(dir_node->children) > 0) {
         for (int i = 0; i < arrlen(dir_node->children); i++) {
@@ -523,29 +525,53 @@ bool fs_remove_file_or_directory(FILE *disk, fs_directory_tree_node_t *dir_node)
     }
     fat12_write_full_fat_table(disk);
 
-    // Now remove the entry from the parent directory
-    // if the parent is NULL, we are in the root directory
-    if (dir_node->parent == NULL) {
-        fprintf(stderr, "Nao e possivel remover o diretorio raiz.\n");
-        arrfree(cluster_list);
-        return false;  // Cannot remove root directory
-    } else {
-        // Find the entry in the parent directory
-        fat12_dir_entry_s entry = fat12_allocate_entry_in_directory(disk, dir_node->parent->metadata.first_cluster);
-        if (entry.cluster == 0 && entry.idx == 0) {
-            fprintf(stderr, "Failed to allocate directory entry for %s\n", dir_node->metadata.filename);
-            arrfree(cluster_list);
-            return false;  // Failed to allocate entry
-        }
+    // // Now remove the entry from the parent directory
+    // // if the parent is NULL, we are in the root directory
+    // if (dir_node->parent == NULL) {
+    //     for (int i = 9; i < FAT12_ROOT_DIRECTORY_ENTRIES; i++) {
+    //         fat12_file_subdir_s dir_entry = fat12_read_directory_entry(disk, i);
+    //         if (dir_entry.first_cluster == dir_node->metadata.first_cluster &&
+    //             strcmp(dir_entry.filename, dir_node->metadata.filename) == 0) {
+    //             // Found the entry, remove it
+    //             if (!fat12_write_directory(disk, 0, i, (fat12_file_subdir_s){0})) {
+    //                 fprintf(stderr, "Erro ao remover a entrada do diretorio raiz: %s\n", dir_node->metadata.filename);
+    //                 arrfree(cluster_list);
+    //                 return false;
+    //             }
+    //             printf("Entrada removida do diretorio raiz: %s\n", dir_node->metadata.filename);
+    //             break;
+    //         }
+    //     }
+    // } else {
+    //     uint16_t *cluster_chain = NULL;
+    //     printf("ABCD: %u\n", dir_node->parent->metadata.first_cluster);
 
-        // Write an empty entry to remove it
-        fat12_file_subdir_s empty_entry = {0};
-        if (!fat12_write_directory(disk, entry.cluster, entry.idx, empty_entry)) {
-            fprintf(stderr, "Failed to write empty directory entry for %s\n", dir_node->metadata.filename);
-            arrfree(cluster_list);
-            return false;  // Failed to write entry
-        }
-    }
+    //     if (!fat12_get_table_entry_chain(dir_node->parent->metadata.first_cluster, &cluster_chain)) {
+    //         fprintf(stderr, "Nao foi possivel encontrar a lista de clusters do diretorio pai\n");
+    //         arrfree(cluster_list);
+    //         return false;
+    //     }
+
+    //     // Find the entry in the parent directory
+    //     for (int i = 0; i < arrlen(cluster_chain); i++) {
+    //         fat12_file_subdir_s dir_entry = fat12_read_directory_from_data_area(disk, cluster_chain[i], 0);
+    //         if (dir_entry.first_cluster == dir_node->metadata.first_cluster &&
+    //             (strcmp(dir_entry.filename, dir_node->metadata.filename) == 0)) {
+    //             // Found the entry, remove it
+    //             if (!fat12_write_directory(disk, cluster_chain[i], 0, (fat12_file_subdir_s){0})) {
+    //                 fprintf(stderr, "Erro ao remover a entrada do diretorio: %s\n", dir_node->metadata.filename);
+    //                 arrfree(cluster_list);
+    //                 return false;
+    //             }
+    //             printf("Entrada removida do diretorio: %s\n", dir_node->metadata.filename);
+    //             break;
+    //         }
+    //     }
+    //     arrfree(cluster_chain);
+    // }
+
+    dir_node->metadata.first_cluster = 0;  // Clear the first cluster to indicate removal
+
     // Free the memory
     arrfree(cluster_list);
 }
